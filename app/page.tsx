@@ -20,6 +20,8 @@ export default function Dashboard() {
   const netProfit = stats.income - stats.expenses;
   const estimatedTax = netProfit > 0 ? netProfit * 0.153 : 0; 
 
+  const [showAddMenu, setShowAddMenu] = useState(false); // အပေါ်နားက state ထဲမှာ ထည့်ပါ
+
   useEffect(() => {
     setIsMounted(true);
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
@@ -88,24 +90,32 @@ export default function Dashboard() {
         
         {/* Quick Action Dropdown */}
         <div className="relative group">
-          <button className="bg-emerald-600 text-white px-8 py-4 rounded-2xl font-black text-xs shadow-xl flex items-center gap-3 hover:bg-emerald-700 transition-all active:scale-95">
+          <button 
+            onClick={() => setShowAddMenu(!showAddMenu)}
+            className="bg-emerald-600 text-white px-8 py-4 rounded-2xl font-black text-xs shadow-xl flex items-center gap-3 hover:bg-emerald-700 transition-all active:scale-95"
+          >
             ADD TRANSACTION <Plus size={18} />
           </button>
           
-          <div className="absolute right-0 mt-2 w-64 bg-white rounded-3xl shadow-2xl border border-slate-100 hidden group-hover:block z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
-            <Link href="/add" className="flex items-center gap-3 p-5 hover:bg-slate-50 font-black text-slate-700 border-b border-slate-50 transition">
-              <div className="w-8 h-8 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center"><Plus size={16}/></div>
-              Add Income / Expense
-            </Link>
-            <Link href="/invoices/add" className="flex items-center gap-3 p-5 hover:bg-slate-50 font-black text-slate-700 border-b border-slate-50 transition">
-              <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center"><Plus size={16}/></div>
-              Create New Invoice
-            </Link>
-            <Link href="/add" className="flex items-center gap-3 p-5 hover:bg-slate-50 font-black text-emerald-600 transition italic">
-              <div className="w-8 h-8 bg-emerald-600 text-white rounded-lg flex items-center justify-center"><Plus size={16}/></div>
-              Scan Receipt (AI)
-            </Link>
-          </div>
+          {showAddMenu && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setShowAddMenu(false)}></div>
+              <div className="absolute right-0 mt-2 w-64 bg-white rounded-3xl shadow-2xl border border-slate-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
+                <Link href="/add" className="flex items-center gap-3 p-5 hover:bg-slate-50 font-black text-slate-700 border-b border-slate-50">
+                  <div className="w-8 h-8 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center"><Plus size={16}/></div>
+                  Add Income / Expense
+                </Link>
+                <Link href="/invoices/add" className="flex items-center gap-3 p-5 hover:bg-slate-50 font-black text-slate-700 border-b border-slate-50">
+                  <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center"><Plus size={16}/></div>
+                  Create New Invoice
+                </Link>
+                <Link href="/add" className="flex items-center gap-3 p-5 hover:bg-slate-50 font-black text-emerald-600 transition italic">
+                      <div className="w-8 h-8 bg-emerald-600 text-white rounded-lg flex items-center justify-center"><Plus size={16}/></div>
+                      Scan Receipt (AI)
+                    </Link>
+              </div>
+            </>
+          )}
         </div>
       </header>
 

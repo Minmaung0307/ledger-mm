@@ -11,6 +11,7 @@ export default function ChartOfAccounts() {
   const [showModal, setShowModal] = useState(false);
   const [accName, setAccName] = useState('');
   const [accType, setAccType] = useState('Assets');
+  const [editAccount, setEditAccount] = useState<any>(null);
 
   useEffect(() => {
     const q = query(collection(db, "chart_of_accounts"), where("uid", "==", auth.currentUser?.uid));
@@ -46,8 +47,12 @@ export default function ChartOfAccounts() {
             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 px-4">{type}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {accounts.filter(a => a.type === type).map(acc => (
-                <div key={acc.id} className="bg-white p-6 rounded-[2rem] shadow-lg border-2 border-slate-50 flex justify-between items-center cursor-pointer hover:border-emerald-500 transition">
-                  <p className="font-black text-slate-900">{acc.name}</p>
+                <div 
+                  key={acc.id} 
+                  onClick={() => setEditAccount(acc)}
+                  className="bg-white p-6 rounded-[2rem] shadow-lg border-2 border-slate-50 flex justify-between items-center cursor-pointer hover:border-emerald-500 transition group"
+                >
+                  <p className="font-black text-slate-900 group-hover:text-emerald-600 transition">{acc.name}</p>
                   <p className="font-black text-emerald-600">$0.00</p>
                 </div>
               ))}

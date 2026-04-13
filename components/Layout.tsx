@@ -1,138 +1,111 @@
 // components/Layout.tsx
 "use client";
 import React, { useEffect, useState } from 'react';
-import { Home, PlusCircle, List, PieChart, LogOut, Settings, FileText } from 'lucide-react';
+import { 
+  LayoutDashboard, Receipt, ShoppingCart, 
+  Users, Landmark, FileBarChart, Settings, LogOut 
+} from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { auth } from '@/lib/firebase';
-import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, signOut, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<any>(null);
   const pathname = usePathname();
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Firebase Auth State ကို စစ်မယ်
     const unsubscribe = onAuthStateChanged(auth, (u) => {
       setUser(u);
-      // User data ရပြီဆိုတာနဲ့ Splash screen ကို ပိတ်ဖို့ timer ပေးမယ်
-      const timer = setTimeout(() => {
-        setIsInitialLoading(false);
-      }, 1000);
-      
-      return () => clearTimeout(timer);
+      setTimeout(() => setIsLoading(false), 800);
     });
-
     return () => unsubscribe();
   }, []);
 
-  // Login/Logout Functions
-  const login = () => signInWithPopup(auth, new GoogleAuthProvider());
-  const logout = () => signOut(auth);
-
-  // Menu List
-  const navItems = [
-    { icon: <Home size={22}/>, label: 'Dashboard', href: '/' },
-    { icon: <List size={22}/>, label: 'Records', href: '/transactions' },
-    { icon: <FileText size={22}/>, label: 'Invoices', href: '/invoices' },
-    { icon: <PieChart size={22}/>, label: 'Tax Report', href: '/report' },
-    { icon: <Settings size={22}/>, label: 'Settings', href: '/settings' },
+  const navGroups = [
+    {
+      group: "Operations",
+      items: [
+        { icon: <LayoutDashboard size={20}/>, label: 'Dashboard', href: '/' },
+        { icon: <Receipt size={20}/>, label: 'Sales & Invoices', href: '/invoices' },
+        { icon: <ShoppingCart size={20}/>, label: 'Purchases & Bills', href: '/transactions' },
+        { icon: <Users size={20}/>, label: 'Payroll (1099)', href: '/payroll' },
+      ]
+    },
+    {
+      group: "Finance & Tax",
+      items: [
+        { icon: <Landmark size={20}/>, label: 'Banking', href: '/banking' },
+        { icon: <FileBarChart size={20}/>, label: 'Accounting Reports', href: '/report' },
+      ]
+    }
   ];
 
-  // ၁။ Splash Screen (App စဖွင့်ချင်း ပြမည့် Animation)
-  if (isInitialLoading) {
-    return (
-      <div className="h-screen w-full flex flex-col items-center justify-center bg-white">
-        <div className="w-16 h-16 bg-emerald-600 rounded-[1.5rem] animate-bounce shadow-2xl shadow-emerald-200 flex items-center justify-center">
-            <div className="w-6 h-6 bg-white rounded-full opacity-20 animate-pulse"></div>
-        </div>
-        <h2 className="mt-8 text-2xl font-black text-slate-900 tracking-tighter uppercase animate-pulse">
-            SimpleLedger <span className="text-emerald-600">US</span>
-        </h2>
-      </div>
-    );
-  }
+  if (isLoading) return (
+    <div className="h-screen w-full flex items-center justify-center bg-white italic font-black text-emerald-600 animate-pulse">
+      SIMPLE LEDGER PRO...
+    </div>
+  );
 
-  // ၂။ Login Page (User မရှိလျှင် ပြမည့် Page)
-  if (!user) {
-    return (
-      <div className="h-screen flex flex-col items-center justify-center bg-slate-50 p-6 text-center">
-        <div className="mb-10 relative">
-            <div className="w-24 h-24 bg-emerald-600 rounded-[2.5rem] rotate-12 shadow-2xl flex items-center justify-center">
-                <FileText size={40} className="text-white -rotate-12" />
-            </div>
-            <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-slate-900 rounded-2xl flex items-center justify-center shadow-lg">
-                <PieChart size={20} className="text-emerald-400" />
-            </div>
-        </div>
-        <h1 className="text-5xl font-black text-slate-900 mb-4 tracking-tighter">SimpleLedger</h1>
-        <p className="text-slate-500 mb-10 font-bold max-w-xs text-lg leading-tight">
-            The minimal accounting app for US small businesses.
-        </p>
-        <button onClick={login} className="flex items-center gap-4 bg-white border-2 border-slate-200 py-5 px-10 rounded-[2rem] font-black text-slate-800 hover:bg-slate-100 shadow-2xl transition-all active:scale-95 text-lg">
-           <img src="https://www.google.com/favicon.ico" className="w-6 h-6" alt="google" />
-           CONTINUE WITH GOOGLE
-        </button>
-      </div>
-    );
-  }
+  if (!user) return (
+    <div className="h-screen flex flex-col items-center justify-center bg-slate-50 p-6">
+       <h1 className="text-5xl font-black text-slate-900 mb-4 tracking-tighter">SimpleLedger</h1>
+       <button onClick={() => signInWithPopup(auth, new GoogleAuthProvider())} className="bg-white border-2 border-slate-200 p-5 rounded-[2rem] font-black shadow-xl flex items-center gap-3">
+         <img src="https://www.google.com/favicon.ico" className="w-5 h-5" /> CONTINUE WITH GOOGLE
+       </button>
+    </div>
+  );
 
-  // ၃။ Main App Layout (Login ဝင်ပြီးမှ ပေါ်မည့် Layout)
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col md:flex-row font-sans">
       {/* Sidebar - Desktop */}
-      <aside className="hidden md:flex w-72 bg-white border-r-2 border-slate-100 flex-col p-8 fixed h-full shadow-sm">
-        <div className="flex items-center gap-3 mb-12">
-            <div className="w-10 h-10 bg-emerald-600 rounded-2xl shadow-lg shadow-emerald-100 flex items-center justify-center">
-                <div className="w-4 h-4 bg-white/20 rounded-full animate-pulse"></div>
-            </div>
-            <h1 className="text-2xl font-black text-slate-900 tracking-tighter">SimpleLedger</h1>
+      <aside className="hidden md:flex w-72 bg-white border-r border-slate-200 flex-col p-8 fixed h-full z-20">
+        <div className="flex items-center gap-3 mb-10 px-2">
+            <div className="w-10 h-10 bg-emerald-600 rounded-2xl shadow-lg shadow-emerald-200 flex items-center justify-center font-black text-white italic">SL</div>
+            <h1 className="text-xl font-black text-slate-900 tracking-tighter uppercase">SimpleLedger</h1>
         </div>
-        
-        <nav className="space-y-3 flex-1">
-          {navItems.map((item) => {
-            const isActive = pathname === item.href;
-            return (
-              <Link key={item.label} href={item.href} 
-                className={`flex items-center gap-4 p-4 rounded-2xl font-black transition-all ${
-                  isActive ? 'bg-emerald-600 text-white shadow-xl shadow-emerald-100 scale-105' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-900'
-                }`}>
-                {item.icon} <span>{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
-        
-        <div className="mt-auto border-t-2 border-slate-50 pt-8 pb-4">
-            <div className="flex items-center gap-4 px-2 mb-8 bg-slate-50 p-4 rounded-3xl">
-                <img src={user.photoURL} className="w-12 h-12 rounded-2xl border-2 border-white shadow-md" alt="profile" />
-                <div className="overflow-hidden">
-                    <p className="text-sm font-black text-slate-900 truncate">{user.displayName}</p>
-                    <p className="text-[10px] font-bold text-slate-400 truncate uppercase tracking-widest">{user.email?.split('@')[0]}</p>
-                </div>
+
+        <nav className="space-y-8">
+          {navGroups.map((group) => (
+            <div key={group.group}>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 px-4">{group.group}</p>
+              <div className="space-y-1">
+                {group.items.map((item) => {
+                  const isActive = pathname === item.href;
+                  return (
+                    <Link key={item.label} href={item.href} className={`flex items-center gap-4 p-4 rounded-2xl font-bold transition-all ${isActive ? 'bg-emerald-600 text-white shadow-xl shadow-emerald-100' : 'text-slate-500 hover:bg-slate-50'}`}>
+                      {item.icon} <span>{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
-            <button onClick={logout} className="flex items-center gap-4 p-4 w-full text-rose-500 font-black hover:bg-rose-50 rounded-2xl transition-all active:scale-95 group">
-                <LogOut size={22} className="group-hover:-translate-x-1 transition" /> Logout Session
-            </button>
+          ))}
+        </nav>
+
+        <div className="mt-auto pt-6 border-t border-slate-100">
+           <Link href="/settings" className={`flex items-center gap-4 p-4 rounded-2xl font-bold mb-2 ${pathname === '/settings' ? 'text-emerald-600' : 'text-slate-400'}`}>
+              <Settings size={20}/> Settings
+           </Link>
+           <button onClick={() => signOut(auth)} className="flex items-center gap-4 p-4 w-full text-rose-500 font-bold hover:bg-rose-50 rounded-2xl transition">
+              <LogOut size={20}/> Logout
+           </button>
         </div>
       </aside>
 
-      <main className="flex-1 md:ml-72 p-6 mb-24 md:mb-0">
-        <div className="max-w-5xl mx-auto">{children}</div>
+      {/* Main Content */}
+      <main className="flex-1 md:ml-72 p-6 md:p-12 mb-24 md:mb-0">
+        <div className="max-w-6xl mx-auto">{children}</div>
       </main>
 
-      {/* Bottom Nav - Mobile */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t-2 border-slate-50 flex justify-around p-5 pb-10 shadow-2xl z-50 rounded-t-[2.5rem]">
-        {navItems.map((item) => {
-          const isActive = pathname === item.href;
-          return (
-            <Link key={item.label} href={item.href} 
-              className={`flex flex-col items-center gap-2 font-black transition-all ${isActive ? 'text-emerald-600 scale-110' : 'text-slate-300'}`}>
-              {item.icon} <span className="text-[9px] uppercase tracking-tighter font-black">{item.label}</span>
-            </Link>
-          );
-        })}
+      {/* Mobile Nav */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 flex justify-around p-4 pb-8 z-30 shadow-2xl">
+        {navGroups[0].items.concat(navGroups[1].items.slice(1,2)).map((item) => (
+           <Link key={item.label} href={item.href} className={`flex flex-col items-center gap-1 ${pathname === item.href ? 'text-emerald-600' : 'text-slate-300'}`}>
+              {item.icon} <span className="text-[9px] font-black uppercase tracking-tighter">{item.label.split(' ')[0]}</span>
+           </Link>
+        ))}
       </nav>
     </div>
   );

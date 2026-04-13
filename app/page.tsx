@@ -12,8 +12,10 @@ export default function Dashboard() {
   const [stats, setStats] = useState({ income: 0, expenses: 0 });
   const [chartData, setChartData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       if (user) {
         const q = query(
@@ -78,19 +80,25 @@ export default function Dashboard() {
 
       {/* Chart Section */}
       <div className="bg-white p-8 rounded-[3rem] shadow-2xl border-2 border-slate-50 mb-10 overflow-hidden">
-        <h3 className="font-black text-slate-900 uppercase text-xs tracking-widest mb-8 text-center">Income vs Expenses (Monthly)</h3>
-        <div className="h-[300px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-              <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontWeight: 'bold', fontSize: 12}} />
-              <Tooltip 
-                contentStyle={{borderRadius: '20px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', fontWeight: 'bold'}} 
-              />
-              <Bar dataKey="income" fill="#10b981" radius={[10, 10, 0, 0]} barSize={30} />
-              <Bar dataKey="expense" fill="#f43f5e" radius={[10, 10, 0, 0]} barSize={30} />
-            </BarChart>
-          </ResponsiveContainer>
+        <h3 className="font-black text-slate-900 uppercase text-xs tracking-widest mb-8 text-center">
+          Income vs Expenses (Monthly)
+        </h3>
+        <div className="h-[300px] w-full min-h-[300px]"> 
+          {isMounted && ( // Browser ပေါ်ရောက်မှ ဂရပ်ကို စဆွဲမယ်
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontWeight: 'bold', fontSize: 10}} />
+                <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10}} />
+                <Tooltip 
+                  cursor={{fill: '#f8fafc'}}
+                  contentStyle={{borderRadius: '20px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', fontWeight: 'bold'}} 
+                />
+                <Bar dataKey="income" fill="#10b981" radius={[6, 6, 0, 0]} barSize={25} />
+                <Bar dataKey="expense" fill="#f43f5e" radius={[6, 6, 0, 0]} barSize={25} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
 

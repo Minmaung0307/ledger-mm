@@ -33,7 +33,8 @@ export default function AddTransaction() {
 
         const data = await response.json();
         if (data.error) {
-           setErrorMsg("AI Scan failed: " + data.error);
+           // details ပါရင် ပြမယ်၊ မပါရင် error ပဲ ပြမယ်
+            setErrorMsg(`AI Error: ${data.details || data.error}`);
         } else if (data.merchant) {
           setDescription(data.merchant);
           setAmount(data.amount.toString());

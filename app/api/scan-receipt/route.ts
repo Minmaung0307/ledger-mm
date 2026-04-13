@@ -2,54 +2,64 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 
-// API Key မရှိရင် Error တက်မှာစိုးလို့ အသေအချာ စစ်မယ်
 const apiKey = process.env.GEMINI_API_KEY;
 
 export async function POST(req: Request) {
   try {
     if (!apiKey) {
-      return NextResponse.json({ error: "Gemini API Key is missing in .env.local" }, { status: 500 });
+      return NextResponse.json({ error: "Gemini API Key missing in environment" }, { status: 500 });
     }
 
     const { image } = await req.json();
     if (!image) {
-      return NextResponse.json({ error: "No image data provided" }, { status: 400 });
+      return NextResponse.json({ error: "No image data" }, { status: 400 });
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
+    
+    // Model နာမည်ကို "gemini-1.5-flash" လို့ပဲ သေချာပေးပါ
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const prompt = `
-      You are an expert accountant. Extract these from the receipt image:
-      1. merchant: (Merchant/Shop name)
-      2. amount: (Total amount paid as a number)
+      You are an expert receipt scanner. Look at this receipt image and extract:
+      1. merchant: (The shop/store name)
+      2. amount: (Total amount as a number, e.g. 15.50)
       3. category: (One of: advertising, car_truck, contract_labor, insurance, legal_fees, meals, office, rent, software, travel, utilities, w2_wages, other)
       
-      Return ONLY a raw JSON object. Do not include any markdown or backticks.
-      Example: {"merchant": "Merchant Name", "amount": 12.50, "category": "meals"}
+      Return ONLY a JSON object. No markdown, no backticks.
+      Example: {"merchant": "Costco", "amount": 120.00, "category": "office"}
     `;
 
-    // Base64 string ထဲက header ကို ဖယ်မယ်
     const imageData = image.includes(',') ? image.split(',')[1] : image;
 
+    // generateContent ကို လှမ်းခေါ်မယ်
     const result = await model.generateContent([
       prompt,
-      { inlineData: { data: imageData, mimeType: "image/jpeg" } }
+      {
+        inlineData: {
+          data: imageData,
+          mimeType: "image/jpeg",
+        },
+      },
     ]);
 
-    const text = result.response.text();
+    const response = await result.response;
+    const text = response.text();
     
-    // JSON ကို သေသေချာချာ ဆွဲထုတ်မယ်
+    // JSON စာသားကို ရှာမယ်
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      throw new Error("AI could not find JSON in the response");
+      throw new Error("AI response did not contain JSON");
     }
 
-    const receiptData = JSON.parse(jsonMatch[0]);
-    return NextResponse.json(receiptData);
+    return NextResponse.json(JSON.parse(jsonMatch[0]));
     
   } catch (error: any) {
-    console.error("Scan Error:", error);
-    return NextResponse.json({ error: error.message || "Scan Failed" }, { status: 500 });
+    console.error("Gemini Error Details:", error);
+    // Error message ကို ပိုပြီး ရှင်းအောင် ပြန်ပို့မယ်
+    return NextResponse.json({ 
+      error: "AI Scan failed", 
+      details: error.message 
+    }, { status: 500 });
   }
 }

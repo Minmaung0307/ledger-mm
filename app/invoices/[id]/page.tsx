@@ -5,7 +5,7 @@ import Layout from '@/components/Layout';
 import { db, auth } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { useParams } from 'next/navigation';
-import { Printer, ArrowLeft, Download } from 'lucide-react';
+import { Printer, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
 export default function InvoiceDetail() {
@@ -25,117 +25,119 @@ export default function InvoiceDetail() {
     fetchData();
   }, [id]);
 
-  // အကောင်းဆုံးနည်းလမ်းဖြစ်တဲ့ Native Print ကို သုံးပါမယ်
   const handlePrint = () => {
     window.print();
   };
 
-  if (!invoice) return <Layout><p className="p-20 text-center font-black">LOADING INVOICE...</p></Layout>;
+  if (!invoice) return <Layout><p className="p-20 text-center font-black">LOADING...</p></Layout>;
 
   return (
     <Layout>
-      {/* 
-        အောက်က Style က Print ထုတ်တဲ့အခါ Sidebar နဲ့ ခလုတ်တွေကို ဖျောက်ပေးပြီး 
-        Invoice ကိုပဲ A4 အပြည့် ပေါ်စေမှာပါ 
-      */}
       <style jsx global>{`
         @media print {
-          aside, nav, .no-print, button {
+          @page {
+            margin: 10mm; /* Browser default headers/footers ဖျောက်ဖို့ margin ထည့်ခြင်း */
+          }
+          aside, nav, .no-print {
             display: none !important;
           }
           main {
             margin-left: 0 !important;
             padding: 0 !important;
           }
-          .invoice-box {
+          body {
+            background: white !important;
+          }
+          .invoice-card {
             box-shadow: none !important;
             border: none !important;
             width: 100% !important;
             padding: 0 !important;
-          }
-          body {
-            background: white !important;
+            margin: 0 !important;
           }
         }
       `}</style>
 
-      <div className="pt-6 pb-20 max-w-4xl mx-auto px-4">
-        {/* Actions - No Print Section */}
-        <div className="flex justify-between items-center mb-10 no-print">
+      <div className="pt-4 pb-10 max-w-4xl mx-auto px-4">
+        {/* Actions */}
+        <div className="flex justify-between items-center mb-6 no-print">
           <Link href="/invoices" className="flex items-center gap-2 text-slate-500 font-bold hover:text-slate-900 transition">
-            <ArrowLeft size={20} /> Back to List
+            <ArrowLeft size={18} /> Back
           </Link>
-          
           <button 
             onClick={handlePrint}
-            className="bg-emerald-600 text-white px-8 py-4 rounded-2xl font-black text-xs flex items-center gap-3 shadow-xl hover:bg-emerald-700 transition active:scale-95"
+            className="bg-emerald-600 text-white px-6 py-3 rounded-xl font-black text-xs flex items-center gap-2 shadow-lg hover:bg-emerald-700 transition"
           >
-            <Printer size={18} /> 
-            PRINT / SAVE AS PDF
+            <Printer size={18} /> PRINT INVOICE
           </button>
         </div>
 
-        {/* Invoice Design Area */}
-        <div className="invoice-box bg-white p-12 md:p-16 rounded-[2.5rem] shadow-2xl border border-slate-100 flex flex-col min-h-[1000px]">
+        {/* Invoice Area - ကျစ်ကျစ်လစ်လစ် ပြင်ထားသော ဒီဇိုင်း */}
+        <div className="invoice-card bg-white p-10 md:p-12 rounded-[2rem] shadow-xl border border-slate-100 flex flex-col overflow-hidden">
           
-          {/* Header */}
-          <div className="flex justify-between items-start mb-16">
+          {/* Header Section */}
+          <div className="flex justify-between items-start mb-8">
             <div>
-              <h1 className="text-5xl font-black text-slate-900 uppercase tracking-tighter mb-4">INVOICE</h1>
-              <div className="bg-slate-900 text-white px-4 py-1 inline-block rounded-lg font-bold text-sm">
+              <h1 className="text-3xl font-black text-slate-900 uppercase tracking-tighter">INVOICE</h1>
+              <div className="mt-2 bg-slate-900 text-white px-3 py-0.5 inline-block rounded-md font-bold text-[10px] tracking-widest">
                 #{invoice.invoiceNumber}
               </div>
             </div>
             <div className="text-right">
-              <p className="text-2xl font-black text-emerald-600 mb-2">{profile?.businessName || 'Business Name'}</p>
-              <p className="text-sm font-bold text-slate-400 max-w-[250px] leading-relaxed whitespace-pre-wrap">
-                {profile?.address || 'Your Address'}
+              <p className="text-xl font-black text-emerald-600 uppercase">{profile?.businessName || 'Your Business Name'}</p>
+              <p className="text-[10px] font-bold text-slate-400 max-w-[200px] leading-tight whitespace-pre-wrap ml-auto">
+                {profile?.address || 'Set address in settings'}
               </p>
             </div>
           </div>
 
-          {/* Billing Info */}
-          <div className="grid grid-cols-2 gap-10 mb-20">
-            <div className="p-8 bg-slate-50 rounded-[2rem]">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Bill To:</p>
-              <p className="text-3xl font-black text-slate-900">{invoice.clientName}</p>
+          {/* Billing Info Section - ပိုကပ်သွားအောင် mb-8 ထားလိုက်ပါတယ် */}
+          <div className="grid grid-cols-2 gap-6 mb-10">
+            <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Bill To:</p>
+              <p className="text-2xl font-black text-slate-900 leading-none">{invoice.clientName}</p>
             </div>
-            <div className="text-right pt-8 px-4">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Issue Date</p>
-              <p className="text-xl font-bold text-slate-900">
-                {invoice.createdAt?.toDate().toLocaleDateString() || 'N/A'}
+            <div className="text-right pt-6 pr-2">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Issue Date</p>
+              <p className="text-md font-bold text-slate-900">
+                {invoice.createdAt?.toDate().toLocaleDateString() || 'Recently'}
               </p>
             </div>
           </div>
 
-          {/* Table */}
-          <div className="border-b-4 border-slate-900 pb-4 mb-4 flex justify-between font-black text-[10px] text-slate-900 uppercase tracking-[0.2em]">
-            <span>Description</span>
-            <span>Total</span>
+          {/* Table Header */}
+          <div className="border-b-2 border-slate-900 pb-2 mb-2 flex justify-between font-black text-[9px] text-slate-900 uppercase tracking-[0.2em]">
+            <span>Service Description</span>
+            <span>Amount</span>
           </div>
 
-          <div className="py-10 flex justify-between items-center border-b border-slate-50">
+          {/* Item Row - Padding လျှော့လိုက်ပါတယ် */}
+          <div className="py-4 flex justify-between items-center border-b border-slate-50">
             <div>
-              <p className="text-xl font-black text-slate-900 uppercase">Professional Services</p>
-              <p className="text-sm font-bold text-slate-400 mt-1 italic tracking-tight">Project delivery and consultation fee</p>
+              <p className="text-md font-black text-slate-900">Professional Services / Project Delivery</p>
+              <p className="text-[11px] font-bold text-slate-400 mt-0.5 italic tracking-tight">Consultation and professional project execution.</p>
             </div>
-            <span className="text-3xl font-black text-slate-900">${Number(invoice.amount).toLocaleString()}</span>
+            <span className="text-xl font-black text-slate-900">${Number(invoice.amount).toLocaleString()}</span>
           </div>
 
-          {/* Summary */}
-          <div className="mt-auto pt-20 flex flex-col items-end">
-            <div className="w-80 space-y-4">
-              <div className="flex justify-between items-center bg-emerald-50 p-6 rounded-3xl">
-                <span className="font-black text-emerald-900 uppercase text-xs">Total Amount Due:</span>
-                <span className="text-4xl font-black text-emerald-600">${Number(invoice.amount).toLocaleString()}</span>
+          {/* Totals Section - ပိုကျစ်အောင် ပြင်ထားပါတယ် */}
+          <div className="mt-8 flex flex-col items-end">
+            <div className="w-64 space-y-2">
+              <div className="flex justify-between text-slate-400 font-bold text-xs px-2">
+                <span>Subtotal:</span>
+                <span>${Number(invoice.amount).toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between items-center bg-emerald-50 p-4 rounded-xl border border-emerald-100">
+                <span className="font-black text-emerald-900 uppercase text-[10px] tracking-widest">Amount Due:</span>
+                <span className="text-2xl font-black text-emerald-600">${Number(invoice.amount).toLocaleString()}</span>
               </div>
             </div>
           </div>
 
-          {/* Footer */}
-          <div className="mt-20 text-center border-t-2 border-slate-50 pt-10">
-            <p className="text-sm font-black text-slate-900 uppercase">Thank you for your business!</p>
-            <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-[0.3em]">System Generated Invoice</p>
+          {/* Simple Footer */}
+          <div className="mt-12 text-center border-t border-slate-100 pt-6">
+            <p className="text-[11px] font-black text-slate-900 uppercase">Thank you for your business!</p>
+            <p className="text-[9px] font-bold text-slate-300 mt-1 uppercase tracking-[0.3em]">Generated by SimpleLedger Cloud</p>
           </div>
         </div>
       </div>

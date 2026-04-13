@@ -14,6 +14,8 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
   const [monthlyStats, setMonthlyStats] = useState({ inc: 0, exp: 0 });
+  const netProfit = stats.income - stats.expenses;
+  const estimatedTax = netProfit > 0 ? netProfit * 0.153 : 0; // 15.3% SE Tax Estimate
 
   useEffect(() => {
     setIsMounted(true);
@@ -114,6 +116,21 @@ export default function Dashboard() {
              <p className="text-[11px] font-bold text-slate-500 italic">
                 Net Margin: <span className="text-emerald-400 font-black">${(monthlyStats.inc - monthlyStats.exp).toLocaleString()}</span>
              </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-10 bg-amber-500 p-10 rounded-[3rem] shadow-2xl text-white relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -mr-10 -mt-10 blur-2xl"></div>
+        <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
+          <div>
+            <p className="text-amber-100 font-black uppercase text-[10px] tracking-widest mb-2">Estimated US Self-Employment Tax (15.3%)</p>
+            <h3 className="text-5xl font-black">${estimatedTax.toLocaleString(undefined, {minimumFractionDigits: 2})}</h3>
+            <p className="text-amber-100 text-xs font-bold mt-2 italic opacity-80">*Based on your current YTD Net Profit.</p>
+          </div>
+          <div className="bg-white/20 p-6 rounded-3xl backdrop-blur-md border border-white/30 text-center">
+              <p className="text-[10px] font-black uppercase tracking-widest mb-1">Tax Deadline</p>
+              <p className="text-xl font-black">APRIL 15</p>
           </div>
         </div>
       </div>

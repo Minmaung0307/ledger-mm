@@ -1,37 +1,66 @@
-// app/banking/page.tsx
+// app/banking/page.tsx (Updated)
 "use client";
 import Layout from '@/components/Layout';
-import { Landmark, UploadCloud, Link as LinkIcon } from 'lucide-react';
+import { Landmark, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { db, auth } from '@/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 
 export default function Banking() {
+  const [balance, setBalance] = useState(0);
+
+  useEffect(() => {
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        const q = query(collection(db, "transactions"), where("uid", "==", user.uid));
+        onSnapshot(q, (snapshot) => {
+          let total = 0;
+          snapshot.docs.forEach(doc => {
+            const data = doc.data();
+            if (data.category === 'income') total += data.amount;
+            else total -= data.amount;
+          });
+          setBalance(total);
+        });
+      }
+    });
+  }, []);
+
   return (
     <Layout>
-      <div className="pt-4">
-        <h2 className="text-4xl font-black text-slate-900 mb-2">Banking</h2>
-        <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest mb-10">Connect & Sync Finances</p>
+      <div className="pt-4 pb-20">
+        <h2 className="text-4xl font-black text-slate-900 mb-8 tracking-tighter">Bank Accounts</h2>
+        
+        {/* Manual Account Card */}
+        <div className="bg-white p-10 rounded-[3rem] shadow-2xl border-2 border-slate-50 mb-10">
+          <div className="flex items-center gap-4 mb-8">
+            <div className="w-12 h-12 bg-emerald-600 rounded-2xl flex items-center justify-center text-white">
+              <Landmark size={24} />
+            </div>
+            <div>
+              <p className="text-xl font-black text-slate-900 tracking-tight">Business Operating Account</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Manual Ledger Balance</p>
+            </div>
+          </div>
+          
+          <h1 className="text-6xl font-black text-slate-900 tracking-tighter mb-8">${balance.toLocaleString()}</h1>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-emerald-50 p-4 rounded-2xl flex items-center gap-3">
+              <ArrowUpRight className="text-emerald-500" />
+              <p className="text-xs font-black text-emerald-700 uppercase">Linked to Sales</p>
+            </div>
+            <div className="bg-rose-50 p-4 rounded-2xl flex items-center gap-3">
+              <ArrowDownLeft className="text-rose-500" />
+              <p className="text-xs font-black text-rose-700 uppercase">Linked to Expenses</p>
+            </div>
+          </div>
+        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-           <div className="md:col-span-2 bg-white p-12 rounded-[3rem] shadow-xl border-2 border-slate-50 flex flex-col items-center justify-center text-center">
-              <div className="bg-emerald-50 p-6 rounded-full mb-6">
-                <Landmark size={40} className="text-emerald-600" />
-              </div>
-              <h3 className="text-2xl font-black text-slate-900 mb-2">Sync with US Banks</h3>
-              <p className="text-slate-400 font-bold max-w-sm mb-8">Securely link Chase, Wells Fargo, BofA, and more to auto-categorize transactions.</p>
-              <button className="bg-emerald-600 text-white px-10 py-5 rounded-[2rem] font-black text-sm shadow-xl flex items-center gap-3">
-                 <LinkIcon size={20}/> CONNECT VIA PLAID
-              </button>
-           </div>
-
-           <div className="bg-slate-900 p-10 rounded-[3rem] text-white flex flex-col justify-between">
-              <div>
-                <UploadCloud size={30} className="text-emerald-400 mb-6" />
-                <h4 className="text-xl font-black mb-2 leading-tight">Manual Import</h4>
-                <p className="text-slate-400 text-sm font-bold">Upload bank statements (CSV/QBO) to import transactions manually.</p>
-              </div>
-              <button className="mt-10 border-2 border-slate-700 p-4 rounded-2xl font-black text-xs hover:bg-slate-800 transition">
-                SELECT FILE
-              </button>
-           </div>
+        <div className="bg-slate-900 p-10 rounded-[3rem] text-white flex justify-between items-center">
+            <p className="font-bold text-slate-400">Want to sync real-time data?</p>
+            <button className="bg-emerald-500 text-white px-6 py-3 rounded-xl font-black text-xs shadow-lg hover:bg-emerald-600 transition uppercase tracking-widest">Connect Bank</button>
         </div>
       </div>
     </Layout>

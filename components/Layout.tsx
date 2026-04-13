@@ -68,7 +68,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col md:flex-row font-sans">
       {/* Sidebar - Desktop */}
-      <aside className="hidden md:flex w-72 bg-white border-r border-slate-200 flex-col p-8 fixed h-full z-20">
+      <aside className="hidden md:flex w-72 bg-white border-r border-slate-200 flex-col p-8 fixed h-full z-20 overflow-y-auto scrollbar-hide">
         <div className="flex items-center gap-3 mb-10 px-2">
             <div className="w-10 h-10 bg-emerald-600 rounded-2xl shadow-lg shadow-emerald-200 flex items-center justify-center font-black text-white italic">SL</div>
             <h1 className="text-xl font-black text-slate-900 tracking-tighter uppercase">SimpleLedger</h1>

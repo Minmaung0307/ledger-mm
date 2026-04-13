@@ -3,7 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import { 
   LayoutDashboard, Receipt, ShoppingCart, 
-  Users, Landmark, FileBarChart, Settings, LogOut 
+  Users, Landmark, FileBarChart, Settings, LogOut, 
+  List
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -25,19 +26,26 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   const navGroups = [
     {
-      group: "Operations",
+      group: "Business",
       items: [
         { icon: <LayoutDashboard size={20}/>, label: 'Dashboard', href: '/' },
-        { icon: <Receipt size={20}/>, label: 'Sales & Invoices', href: '/invoices' },
-        { icon: <ShoppingCart size={20}/>, label: 'Purchases & Bills', href: '/transactions' },
-        { icon: <Users size={20}/>, label: 'Payroll (1099)', href: '/payroll' },
+        { icon: <Receipt size={20}/>, label: 'Sales/Invoices', href: '/invoices' },
+        { icon: <ShoppingCart size={20}/>, label: 'Purchases/Bills', href: '/transactions' },
       ]
     },
     {
-      group: "Finance & Tax",
+      group: "Payroll",
       items: [
-        { icon: <Landmark size={20}/>, label: 'Banking', href: '/banking' },
-        { icon: <FileBarChart size={20}/>, label: 'Accounting Reports', href: '/report' },
+        { icon: <Users size={20}/>, label: 'Contractors (1099)', href: '/payroll' },
+        { icon: <Users size={20}/>, label: 'Employees (W-2)', href: '/payroll/employees' },
+      ]
+    },
+    {
+      group: "Accounting",
+      items: [
+        { icon: <Landmark size={20}/>, label: 'Bank Accounts', href: '/banking' },
+        { icon: <FileBarChart size={20}/>, label: 'Tax Reports (P&L)', href: '/report' },
+        { icon: <List size={20}/>, label: 'Chart of Accounts', href: '/accounts' }, // Wave ရဲ့ Screenshot ထဲကဟာ
       ]
     }
   ];

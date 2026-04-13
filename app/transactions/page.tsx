@@ -5,12 +5,13 @@ import Layout from '@/components/Layout';
 import { db, auth } from '@/lib/firebase';
 import { onAuthStateChanged } from "firebase/auth";
 import { collection, query, orderBy, onSnapshot, deleteDoc, doc, where } from 'firebase/firestore';
-import { Trash2, Download, Image as ImageIcon, Search } from 'lucide-react';
+import { Trash2, Download, Image as ImageIcon, Search, Filter } from 'lucide-react';
 
 export default function TransactionsList() {
   const [transactions, setTransactions] = useState<any[]>([]);
-  const [searchTerm, setSearchTerm] = useState(''); // ရှာဖွေဖို့ state
+  const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [showOnlyReceipts, setShowOnlyReceipts] = useState(false);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
@@ -47,7 +48,6 @@ export default function TransactionsList() {
 
   const exportToCSV = () => {
     if (transactions.length === 0) return alert("No data to export");
-    
     const headers = "Date,Description,Category,Amount\n";
     const rows = transactions.map(t => {
       const date = t.date?.toDate().toLocaleDateString() || "N/A";
@@ -63,11 +63,18 @@ export default function TransactionsList() {
     window.URL.revokeObjectURL(url);
   };
 
-  // Search Logic: Description နဲ့ Category ထဲမှာ လိုက်ရှာမယ်
-  const filteredTransactions = transactions.filter(t => 
-    t.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    t.category.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // --- ပြင်ဆင်လိုက်သော Logic အပိုင်း ---
+  const filteredTransactions = transactions.filter(t => {
+    // ၁။ Search Logic (Description သို့မဟုတ် Category ထဲမှာ စာသားပါသလား စစ်မယ်)
+    const matchesSearch = 
+      t.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      t.category.toLowerCase().includes(searchTerm.toLowerCase());
+
+    // ၂။ Receipt Toggle Logic (Toggle ဖွင့်ထားရင် ပုံရှိတဲ့ဟာပဲ ပြမယ်၊ ပိတ်ထားရင် အကုန်ပြမယ်)
+    const matchesReceiptToggle = showOnlyReceipts ? (t.receiptUrl && t.receiptUrl !== "") : true;
+
+    return matchesSearch && matchesReceiptToggle;
+  });
 
   return (
     <Layout>
@@ -76,29 +83,43 @@ export default function TransactionsList() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
           <div>
             <h2 className="text-4xl font-black text-slate-900 tracking-tight">Records</h2>
-            <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.2em] mt-1">History & Management</p>
+            <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.2em] mt-1">Income & Expenses Gallery</p>
           </div>
           
-          <button 
-            onClick={exportToCSV} 
-            className="flex items-center justify-center gap-2 bg-slate-900 text-white px-8 py-4 rounded-2xl font-black text-xs hover:bg-slate-800 transition active:scale-95 shadow-2xl"
-          >
-            <Download size={18} />
-            EXPORT TO CSV
-          </button>
+          <div className="flex flex-wrap gap-3">
+            <button 
+              onClick={() => setShowOnlyReceipts(!showOnlyReceipts)}
+              className={`px-5 py-3 rounded-2xl font-black text-[10px] flex items-center gap-2 transition shadow-md active:scale-95 ${
+                showOnlyReceipts 
+                ? 'bg-emerald-600 text-white shadow-emerald-200' 
+                : 'bg-white text-slate-500 border-2 border-slate-100 hover:bg-slate-50'
+              }`}
+            >
+              <Filter size={14} />
+              {showOnlyReceipts ? "SHOWING RECEIPTS ONLY" : "FILTER BY RECEIPT"}
+            </button>
+
+            <button 
+              onClick={exportToCSV} 
+              className="flex items-center justify-center gap-2 bg-slate-900 text-white px-6 py-3 rounded-2xl font-black text-[10px] hover:bg-slate-800 transition active:scale-95 shadow-xl"
+            >
+              <Download size={16} />
+              EXPORT CSV
+            </button>
+          </div>
         </div>
 
         {/* Search Bar Area */}
         <div className="relative mb-8 group">
-          <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-emerald-500 transition">
-            <Search size={20} />
+          <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none text-slate-300 group-focus-within:text-emerald-500 transition">
+            <Search size={22} />
           </div>
           <input 
             type="text"
-            placeholder="Search descriptions or categories..."
+            placeholder="Search by description or category..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-14 pr-6 py-5 border-2 border-slate-100 rounded-[1.5rem] focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 focus:outline-none font-bold text-slate-900 bg-white shadow-sm transition-all text-lg placeholder:text-slate-300"
+            className="w-full pl-16 pr-6 py-5 border-2 border-slate-100 rounded-[1.8rem] focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 focus:outline-none font-bold text-slate-900 bg-white shadow-sm transition-all text-lg placeholder:text-slate-300"
           />
         </div>
         
@@ -106,24 +127,26 @@ export default function TransactionsList() {
         <div className="bg-white rounded-[2.5rem] shadow-2xl border-2 border-slate-50 overflow-hidden">
           <div className="divide-y-2 divide-slate-50">
             {loading ? (
-              <p className="p-20 text-center font-black animate-pulse text-slate-300">LOADING RECORDS...</p>
+              <p className="p-24 text-center font-black animate-pulse text-slate-200 tracking-widest uppercase text-xs">Syncing Ledger...</p>
             ) : filteredTransactions.length === 0 ? (
-              <div className="p-20 text-center">
-                <p className="text-slate-300 font-black text-2xl italic tracking-tighter">No transactions match your search.</p>
+              <div className="p-24 text-center">
+                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Search size={30} className="text-slate-200" />
+                </div>
+                <p className="text-slate-300 font-black text-xl italic tracking-tight">No records match your filters.</p>
               </div>
             ) : (
               filteredTransactions.map((item) => (
-                <div key={item.id} className="p-6 md:p-8 flex justify-between items-center hover:bg-slate-50/50 transition group">
+                <div key={item.id} className="p-6 md:p-8 flex justify-between items-center hover:bg-slate-50/50 transition group border-b last:border-0 border-slate-50">
                   <div className="flex-1">
-                    <div className="flex items-center gap-3">
-                      <p className="font-black text-xl text-slate-900 group-hover:text-emerald-600 transition">{item.description}</p>
-                      {/* ပုံရှိရင် Icon လေး ပြမယ် */}
+                    <div className="flex items-center gap-4">
+                      <p className="font-black text-xl text-slate-900 group-hover:text-emerald-600 transition tracking-tight">{item.description}</p>
                       {item.receiptUrl && (
                         <a 
                           href={item.receiptUrl} 
                           target="_blank" 
                           rel="noreferrer" 
-                          className="text-emerald-500 hover:bg-emerald-500 hover:text-white p-2 rounded-xl transition shadow-sm bg-emerald-50"
+                          className="text-emerald-500 bg-emerald-50 p-2 rounded-xl transition hover:bg-emerald-500 hover:text-white shadow-sm"
                           title="View Receipt"
                         >
                           <ImageIcon size={18} />
@@ -134,14 +157,14 @@ export default function TransactionsList() {
                       <span className="text-[10px] font-black px-4 py-1.5 bg-slate-100 text-slate-500 rounded-full uppercase tracking-widest">
                         {item.category.replace('_', ' ')}
                       </span>
-                      <span className="text-xs font-bold text-slate-300">
+                      <span className="text-[11px] font-bold text-slate-300 uppercase tracking-tighter">
                         {item.date?.toDate().toLocaleDateString() || 'Recently'}
                       </span>
                     </div>
                   </div>
                   
                   <div className="flex items-center gap-8">
-                    <p className={`text-2xl md:text-3xl font-black ${item.category === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    <p className={`text-2xl md:text-3xl font-black tracking-tighter ${item.category === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
                       {item.category === 'income' ? '+' : '-'}${Number(item.amount).toLocaleString()}
                     </p>
                     <button 

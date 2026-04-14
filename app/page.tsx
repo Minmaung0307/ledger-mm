@@ -248,12 +248,21 @@ export default function Dashboard() {
             <p className="p-16 text-center text-slate-300 font-bold italic">No financial activity recorded yet.</p>
           ) : (
             transactions.slice(0, 5).map(item => (
-              <div key={item.id} className="p-8 flex justify-between items-center hover:bg-slate-50 transition border-l-4 border-transparent hover:border-emerald-500">
-                <div>
-                  <p className="font-black text-slate-900 text-xl tracking-tight">{item.description}</p>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+              <div key={item.id} className="py-3 px-8 flex justify-between items-center hover:bg-slate-50 transition border-l-4 border-transparent hover:border-emerald-500">
+                <div className="flex items-center gap-3">
+                  {/* Verify Check Icon (ရှိရင် ထည့်ပါ) */}
+                  {item.verified && (
+                    <span title="Verified with Bank">
+                      <CheckCircle2 size={16} className="text-emerald-500" />
+                    </span>
+                  )}
+                  
+                  <div>
+                    <p className="font-black text-slate-900 text-lg tracking-tight leading-tight">{item.description}</p>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
                     {item.category === 'estimated_tax_paid' ? 'Quarterly Tax Payment' : item.category.replace('_', ' ')}
-                  </p>
+                    </p>
+                  </div>
                 </div>
                 <div className="flex items-center gap-4">
                   {item.verified && (
@@ -261,7 +270,7 @@ export default function Dashboard() {
                       <CheckCircle2 size={16} className="text-emerald-500" />
                     </span>
                   )}
-                  <p className={`text-2xl md:text-3xl font-black tracking-tighter ${item.category === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                  <p className={`text-xl md:text-2xl font-black tracking-tighter ${item.category === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
                     {item.category === 'income' ? '+' : '-'}${Number(item.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}
                   </p>
                 </div>

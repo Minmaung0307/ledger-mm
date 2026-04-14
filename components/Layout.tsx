@@ -4,7 +4,8 @@ import React, { useEffect, useState } from 'react';
 import { 
   LayoutDashboard, Receipt, ShoppingCart, 
   Users, Landmark, FileBarChart, Settings, LogOut, 
-  List
+  List,
+  ImageIcon
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -31,6 +32,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         { icon: <LayoutDashboard size={20}/>, label: 'Dashboard', href: '/' },
         { icon: <Receipt size={20}/>, label: 'Sales/Invoices', href: '/invoices' },
         { icon: <ShoppingCart size={20}/>, label: 'Purchases/Bills', href: '/transactions' },
+        { icon: <ImageIcon size={20}/>, label: 'Receipts Gallery', href: '/receipts' },
       ]
     },
     {

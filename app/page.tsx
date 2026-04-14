@@ -134,20 +134,6 @@ export default function Dashboard() {
         </div>
       </header>
 
-      {/* --- NEW: Tax Deadline Countdown Banner --- */}
-      <div className="mb-10 bg-slate-900 p-6 rounded-[2.5rem] flex flex-col md:flex-row items-center justify-between shadow-2xl border border-slate-800">
-          <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-rose-500 rounded-2xl flex items-center justify-center text-white animate-pulse shadow-lg shadow-rose-500/20">
-                  <Calendar size={24} />
-              </div>
-              <div className="text-center md:text-left">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Next IRS Estimated Tax Deadline: {deadline.date}</p>
-                  <h4 className="text-xl font-black text-white">{deadline.days} Days Remaining</h4>
-              </div>
-          </div>
-          <Link href="/report" className="mt-4 md:mt-0 bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-xl font-black text-[10px] transition uppercase tracking-widest">View Tax Report</Link>
-      </div>
-
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
         <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border-b-8 border-emerald-500 relative">

@@ -6,191 +6,134 @@ import { TAX_CATEGORIES } from '@/lib/constants';
 import { db, auth, storage } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { Camera, Sparkles, Loader2, AlertCircle } from 'lucide-react';
+import { Camera, Loader2, Check, AlertCircle } from 'lucide-react';
 
 export default function AddTransaction() {
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
-  const [category, setCategory] = useState('income');
+  const [category, setCategory] = useState('other');
   const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null); // ပုံစစ်ဖို့
   const [isSaving, setIsSaving] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
 
-  // --- ပုံကို ဆိုဒ်ကျုံ့ပေးမည့် Function (Compression) ---
-  const compressImage = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
+  // --- ပုံကို အလိုအလျောက် ဆိုဒ်ကျုံ့ပေးမည့် Function ---
+  const compressAndGetBase64 = (selectedFile: File): Promise<string> => {
+    return new Promise((resolve) => {
       const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = (event) => {
+      reader.readAsDataURL(selectedFile);
+      reader.onload = (e) => {
         const img = new Image();
-        img.src = event.target?.result as string;
+        img.src = e.target?.result as string;
         img.onload = () => {
           const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 1200; // ပုံအကျယ်ကို ၁၂၀၀ ထက်မကျော်အောင် ထားမယ်
+          const MAX_WIDTH = 1000; // ပုံကို ၁၀၀၀ pixel ထက်မပိုအောင် ကျုံ့မယ်
           let width = img.width;
           let height = img.height;
-
-          if (width > MAX_WIDTH) {
-            height *= MAX_WIDTH / width;
-            width = MAX_WIDTH;
-          }
-
-          canvas.width = width;
-          canvas.height = height;
+          if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+          canvas.width = width; canvas.height = height;
           const ctx = canvas.getContext('2d');
           ctx?.drawImage(img, 0, 0, width, height);
-          
-          // Quality ကို 0.7 (70%) ထားပြီး JPEG ပြောင်းမယ် (ဒါဆိုရင် ဆိုဒ်တော်တော် သေးသွားပါပြီ)
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-          resolve(dataUrl);
+          resolve(canvas.toDataURL('image/jpeg', 0.6)); // 60% Quality နဲ့ ကျုံ့လိုက်ပြီ
         };
       };
-      reader.onerror = (error) => reject(error);
     });
   };
 
-  const handleAIScan = async (selectedFile: File) => {
-    setIsScanning(true);
-    setErrorMsg('');
-    try {
-      // ၁။ ပုံကို အရင်ကျုံ့မယ်
-      const compressedBase64 = await compressImage(selectedFile);
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (!selectedFile) return;
 
-      // ၂။ ကျုံ့ထားတဲ့ ပုံကိုမှ API ဆီ ပို့မယ်
+    setFile(selectedFile);
+    setIsScanning(true);
+    
+    try {
+      const compressedData = await compressAndGetBase64(selectedFile);
+      setPreview(compressedData); // ပုံကို screen ပေါ်မှာ ပြထားမယ်
+
+      // AI ဆီ ပို့မယ်
       const response = await fetch('/api/scan-receipt', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: compressedBase64 }),
+        body: JSON.stringify({ image: compressedData }),
       });
-
       const data = await response.json();
       
-      if (!response.ok) {
-        throw new Error(data.details || data.error || "Server error");
-      }
-
       if (data.merchant) {
         setDescription(data.merchant);
         setAmount(data.amount.toString());
-        const validCat = TAX_CATEGORIES.find(c => c.value === data.category);
-        if (validCat) setCategory(data.category);
+        if (TAX_CATEGORIES.some(c => c.value === data.category)) setCategory(data.category);
       }
-    } catch (error: any) {
-      console.error("AI Error:", error);
-      setErrorMsg(`AI Scan Failed: ${error.message}`);
+    } catch (err) {
+      console.log("AI failed, switching to manual.");
     } finally {
       setIsScanning(false);
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-      setFile(selectedFile);
-      handleAIScan(selectedFile);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const user = auth.currentUser;
-    if (!user || isSaving) return;
+    if (!auth.currentUser || isSaving) return;
     setIsSaving(true);
-    setErrorMsg('');
 
     try {
       let receiptUrl = "";
-      if (file) {
-        const storageRef = ref(storage, `receipts/${user.uid}/${Date.now()}_${file.name}`);
-        const snapshot = await uploadBytes(storageRef, file);
-        receiptUrl = await getDownloadURL(snapshot.ref);
+      if (preview) { // Preview ထဲက ကျုံ့ထားတဲ့ပုံကိုပဲ တိုက်ရိုက်သိမ်းမယ်
+        const storageRef = ref(storage, `receipts/${auth.currentUser.uid}/${Date.now()}.jpg`);
+        const response = await fetch(preview);
+        const blob = await response.blob();
+        await uploadBytes(storageRef, blob);
+        receiptUrl = await getDownloadURL(storageRef);
       }
 
       await addDoc(collection(db, "transactions"), {
-        description,
-        amount: parseFloat(amount),
-        category,
-        receiptUrl,
-        date: serverTimestamp(),
-        uid: user.uid,
+        description, amount: parseFloat(amount), category, receiptUrl,
+        date: serverTimestamp(), uid: auth.currentUser.uid,
       });
       window.location.href = "/";
-    } catch (error: any) {
-      setErrorMsg(`Save Failed: ${error.message}`);
+    } catch (error) {
+      alert("Error saving record");
       setIsSaving(false);
     }
   };
 
   return (
     <Layout>
-      <div className="max-w-xl mx-auto pt-6 px-4 pb-32">
-        <h2 className="text-4xl font-black mb-8 text-slate-900 tracking-tight italic">Add Record</h2>
+      <div className="max-w-xl mx-auto pt-4 px-4 pb-32">
+        <h2 className="text-3xl font-black mb-8 text-slate-900 tracking-tighter uppercase italic">Add Record</h2>
         
-        {errorMsg && (
-          <div className="mb-6 p-5 bg-rose-50 border-2 border-rose-100 text-rose-600 rounded-3xl flex items-start gap-3 font-bold text-sm shadow-sm animate-in fade-in duration-300">
-             <AlertCircle size={20} className="mt-0.5 flex-shrink-0" /> 
-             <div className="leading-tight">{errorMsg}</div>
-          </div>
-        )}
-
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="relative border-4 border-dashed border-slate-200 p-10 rounded-[3.5rem] bg-white flex flex-col items-center justify-center gap-4 hover:border-emerald-400 transition-all cursor-pointer shadow-sm">
-            {isScanning ? (
-                <div className="flex flex-col items-center">
-                    <Loader2 size={48} className="text-emerald-500 animate-spin mb-4" />
-                    <p className="text-emerald-600 font-black uppercase text-[10px] tracking-widest animate-pulse">Compressing & AI Reading...</p>
-                </div>
-            ) : (
-                <>
-                    <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center text-slate-300">
-                        <Camera size={40} />
-                    </div>
-                    <div className="text-center px-4">
-                        <p className="text-slate-900 font-black">Snap Receipt</p>
-                        <p className="text-slate-400 text-[10px] font-bold uppercase mt-1 tracking-widest italic opacity-70">AI will auto-fill everything</p>
-                    </div>
-                </>
-            )}
-            <input 
-              type="file" accept="image/*" capture="environment"
-              onChange={handleFileChange}
-              className="absolute inset-0 opacity-0 cursor-pointer"
-              disabled={isScanning}
-            />
+          {/* Snap Receipt Area */}
+          <div className="relative h-64 border-4 border-dashed border-slate-200 rounded-[3rem] bg-white overflow-hidden flex flex-col items-center justify-center group transition-all hover:border-emerald-400 shadow-sm">
+            {preview ? (
+                <img src={preview} className="absolute inset-0 w-full h-full object-cover opacity-40 blur-[1px]" />
+            ) : null}
+
+            <div className="relative z-10 flex flex-col items-center text-center px-6">
+                {isScanning ? (
+                    <Loader2 size={48} className="text-emerald-500 animate-spin mb-3" />
+                ) : (
+                    <div className="w-16 h-16 bg-emerald-600 rounded-2xl flex items-center justify-center text-white mb-3 shadow-lg"><Camera size={32} /></div>
+                )}
+                <p className="font-black text-slate-900">{isScanning ? "AI IS READING..." : "SNAP OR UPLOAD"}</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Automatic Compression Enabled</p>
+            </div>
+            
+            <input type="file" accept="image/*" capture="environment" onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer" />
           </div>
 
-          <div className={`bg-white p-8 rounded-[3rem] shadow-2xl border border-slate-50 space-y-6 transition-all duration-500 ${isScanning ? 'opacity-30 blur-[4px] pointer-events-none scale-95' : 'opacity-100 blur-0 scale-100'}`}>
-            <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                    Description {isScanning && <Sparkles size={12} className="text-emerald-500 animate-bounce" />}
-                </label>
-                <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} required
-                    className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-900 focus:border-emerald-500 outline-none transition-all text-lg" placeholder="Shop name" />
-            </div>
-
+          {/* Form Area */}
+          <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl border border-slate-50 space-y-6">
+            <input type="text" value={description} onChange={e => setDescription(e.target.value)} placeholder="Merchant / Store Name" className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-900 focus:border-emerald-500 outline-none transition-all" required />
+            
             <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                        Amount ($)
-                    </label>
-                    <input type="number" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} required
-                        className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-2xl text-slate-900 focus:border-emerald-500 outline-none" placeholder="0.00" />
-                </div>
-                <div>
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Category</label>
-                    <select value={category} onChange={(e) => setCategory(e.target.value)}
-                        className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-900 focus:border-emerald-500 outline-none appearance-none">
-                        {TAX_CATEGORIES.map(cat => (
-                            <option key={cat.value} value={cat.value}>{cat.label}</option>
-                        ))}
-                    </select>
-                </div>
+                <input type="number" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-2xl text-slate-900 focus:border-emerald-500 outline-none" required />
+                <select value={category} onChange={e => setCategory(e.target.value)} className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold focus:border-emerald-500 outline-none appearance-none">
+                    {TAX_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                </select>
             </div>
 
-            <button type="submit" disabled={isSaving || isScanning}
-                className="w-full bg-slate-900 text-white p-5 rounded-2xl font-black uppercase tracking-widest shadow-xl hover:bg-emerald-600 transition-all active:scale-95 disabled:bg-slate-100 disabled:text-slate-300">
-                {isSaving ? "SAVING..." : "SAVE TRANSACTION"}
+            <button type="submit" disabled={isSaving || isScanning} className="w-full bg-slate-900 text-white p-5 rounded-2xl font-black uppercase tracking-[0.2em] shadow-xl hover:bg-emerald-600 transition-all active:scale-95 disabled:bg-slate-200">
+                {isSaving ? "SAVING..." : "CONFIRM & SAVE"}
             </button>
           </div>
         </form>

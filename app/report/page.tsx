@@ -187,6 +187,40 @@ export default function ProfitLossReport() {
             </div>
         </div>
 
+        {/* P&L Table Style */}
+        <div className="bg-white rounded-[3rem] shadow-2xl overflow-hidden border border-slate-100 mb-16">
+            <div className="p-10 border-b-8 border-emerald-500">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Total Operating Income</p>
+                <h3 className="text-5xl font-black text-slate-900">${income.toLocaleString(undefined, {minimumFractionDigits: 2})}</h3>
+            </div>
+
+            <div className="p-10 space-y-8 bg-slate-50/30">
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Operating Expenses (Deductions)</h4>
+                <div className="space-y-4">
+                    {TAX_CATEGORIES.filter(c => c.type === 'expense').map(cat => {
+                        const total = data.filter(d => d.category === cat.value).reduce((s, i) => s + i.amount, 0);
+                        return (
+                            <div key={cat.value} className="flex justify-between items-center group">
+                                <p className="font-bold text-slate-500 group-hover:text-slate-900 transition text-sm">{cat.label}</p>
+                                <div className="flex-1 border-b-2 border-dotted border-slate-200 mx-4 mb-1"></div>
+                                <p className="font-black text-slate-900 text-sm">${total.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+
+            <div className="p-10 bg-slate-900 text-white flex justify-between items-center">
+                <div>
+                    <p className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em] mb-1">Net Ordinary Income</p>
+                    <h3 className="text-4xl font-black italic">Net Profit:</h3>
+                </div>
+                <h3 className="text-5xl font-black text-emerald-400 tracking-tighter">
+                    ${(income - expenses).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                </h3>
+            </div>
+        </div>
+
         {/* --- Mapping Guide Section --- */}
         <div className="mt-24 border-t-4 border-slate-100 pt-16 no-print">
           <h3 className="text-3xl font-black text-slate-900 mb-8 tracking-tighter flex items-center gap-3">

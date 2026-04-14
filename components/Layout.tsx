@@ -10,13 +10,13 @@ import {
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { auth } from '@/lib/firebase';
-import { onAuthStateChanged, signOut, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { onAuthStateChanged, signOut, signInWithRedirect, GoogleAuthProvider } from 'firebase/auth';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<any>(null);
   const pathname = usePathname();
   const [isLoading, setIsLoading] = useState(true);
-  const login = () => signInWithPopup(auth, new GoogleAuthProvider());
+  const login = () => signInWithRedirect(auth, new GoogleAuthProvider());
   const logout = () => signOut(auth);
 
   useEffect(() => {

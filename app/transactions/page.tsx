@@ -5,7 +5,7 @@ import Layout from '@/components/Layout';
 import { db, auth } from '@/lib/firebase';
 import { onAuthStateChanged } from "firebase/auth";
 import { collection, query, orderBy, onSnapshot, deleteDoc, doc, where, updateDoc } from 'firebase/firestore';
-import { Trash2, Download, Image as ImageIcon, Search, Filter, Edit3, X, CheckCircle2 } from 'lucide-react'; // CheckCircle2 ပါအောင် ထည့်လိုက်ပါပြီ
+import { Trash2, Download, Image as ImageIcon, Search, Filter, Edit3, X, CheckCircle2, AlertTriangle } from 'lucide-react'; // AlertTriangle ထည့်လိုက်ပါတယ်
 import { TAX_CATEGORIES } from '@/lib/constants';
 
 export default function TransactionsList() {
@@ -35,7 +35,17 @@ export default function TransactionsList() {
     return () => unsubscribeAuth();
   }, []);
 
-  // ၁။ Bank Reconciliation (ဘဏ်စာရင်းနှင့် တိုက်စစ်ပြီးကြောင်း အမှန်ခြစ်ခြင်း)
+  // Duplicate Check Logic (Description, Amount, Date တူရင် သတိပေးမယ်)
+  const isPotentialDuplicate = (item: any) => {
+    const itemDate = item.date?.toDate().toLocaleDateString();
+    return transactions.some(other => 
+      other.id !== item.id && 
+      other.description === item.description && 
+      other.amount === item.amount &&
+      other.date?.toDate().toLocaleDateString() === itemDate
+    );
+  };
+
   const toggleVerify = async (id: string, currentStatus: boolean) => {
     try {
       const docRef = doc(db, "transactions", id);
@@ -55,7 +65,6 @@ export default function TransactionsList() {
     }
   };
 
-  // ၂။ စာရင်းပြင်ဆင်ခြင်း Logic
   const handleUpdateTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editItem) return;
@@ -141,52 +150,67 @@ export default function TransactionsList() {
             ) : filteredTransactions.length === 0 ? (
               <p className="p-24 text-center text-slate-300 font-black italic">No records found matching filters.</p>
             ) : (
-              filteredTransactions.map((item) => (
-                <div key={item.id} className="p-4 md:px-8 md:py-3 flex justify-between items-center hover:bg-slate-50/50 transition border-b last:border-0 border-slate-50 group">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-4">
-                      {/* အမှန်ခြစ်ခလုတ် - ဘဏ်စာရင်းနဲ့ တိုက်စစ်ပြီးရင် နှိပ်ရန် */}
-                      <button 
-                        onClick={() => toggleVerify(item.id, item.verified)}
-                        className={`p-2 rounded-xl transition-all active:scale-90 ${item.verified ? 'bg-emerald-100 text-emerald-600 shadow-inner' : 'bg-slate-50 text-slate-200 hover:text-slate-400'}`}
-                        title={item.verified ? "Verified with Bank" : "Mark as Verified"}
-                      >
-                        <CheckCircle2 size={22} />
-                      </button>
+              filteredTransactions.map((item) => {
+                // Braces {} နဲ့ Logic စစ်တဲ့အပိုင်းကို ပြင်လိုက်ပါတယ်
+                const hasDuplicate = isPotentialDuplicate(item);
+                const isIncome = item.category === 'income';
 
-                      <p className="font-black text-xl text-slate-900 tracking-tight">{item.description}</p>
-                      
-                      {item.receiptUrl && (
-                        <a href={item.receiptUrl} target="_blank" rel="noreferrer" className="text-emerald-500 bg-emerald-50 p-2 rounded-xl transition hover:bg-emerald-500 hover:text-white shadow-sm">
-                          <ImageIcon size={18} />
-                        </a>
-                      )}
+                return (
+                  <div key={item.id} className={`p-4 md:px-8 md:py-4 flex justify-between items-center hover:bg-slate-50/50 transition border-b last:border-0 border-slate-50 group relative ${hasDuplicate ? 'bg-amber-50/30' : ''}`}>
+                    
+                    {/* Duplicate Warning Label */}
+                    {hasDuplicate && (
+                      <div className="absolute top-1 left-1/2 -translate-x-1/2 bg-amber-100 text-amber-700 px-3 py-0.5 rounded-full font-black text-[8px] flex items-center gap-1 border border-amber-200 shadow-sm z-10 animate-pulse">
+                        <AlertTriangle size={10} /> POSSIBLE DUPLICATE
+                      </div>
+                    )}
+
+                    <div className="flex-1">
+                      <div className="flex items-center gap-4">
+                        <button 
+                          onClick={() => toggleVerify(item.id, item.verified)}
+                          className={`p-2 rounded-xl transition-all active:scale-90 ${item.verified ? 'bg-emerald-100 text-emerald-600 shadow-inner' : 'bg-slate-50 text-slate-200 hover:text-slate-400'}`}
+                          title={item.verified ? "Verified with Bank" : "Mark as Verified"}
+                        >
+                          <CheckCircle2 size={22} />
+                        </button>
+
+                        <div>
+                          <p className="font-black text-xl text-slate-900 tracking-tight leading-tight">{item.description}</p>
+                          <div className="flex items-center gap-3 mt-1">
+                            <span className={`text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest ${isIncome ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
+                              {item.category.replace('_', ' ')}
+                            </span>
+                            <span className="text-[10px] font-bold text-slate-300 uppercase italic">
+                              {item.date?.toDate().toLocaleDateString() || 'Recently'}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        {item.receiptUrl && (
+                          <a href={item.receiptUrl} target="_blank" rel="noreferrer" className="text-emerald-500 bg-emerald-50 p-2 rounded-xl transition hover:bg-emerald-500 hover:text-white shadow-sm">
+                            <ImageIcon size={18} />
+                          </a>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-4 mt-0.5 ml-10">
-                      <span className="text-[10px] font-black px-4 py-1.5 bg-slate-100 text-slate-500 rounded-full uppercase tracking-widest">
-                        {item.category.replace('_', ' ')}
-                      </span>
-                      <span className="text-[11px] font-bold text-slate-300 uppercase tracking-tighter italic">
-                        {item.date?.toDate().toLocaleDateString() || 'Recently'}
-                      </span>
+                    
+                    <div className="flex items-center gap-4 md:gap-8">
+                      <p className={`text-2xl md:text-3xl font-black tracking-tighter ${isIncome ? 'text-emerald-600' : 'text-rose-600'}`}>
+                        {isIncome ? '+' : '-'}${Number(item.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                      </p>
+                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button onClick={() => setEditItem({id: item.id, ...item})} className="text-slate-300 hover:text-emerald-500 p-2 hover:bg-emerald-50 rounded-xl transition">
+                              <Edit3 size={22} />
+                          </button>
+                          <button onClick={() => handleDelete(item.id)} className="text-slate-300 hover:text-rose-600 p-2 hover:bg-rose-50 rounded-xl transition">
+                              <Trash2 size={22} />
+                          </button>
+                      </div>
                     </div>
                   </div>
-                  
-                  <div className="flex items-center gap-4 md:gap-6">
-                    <p className={`text-2xl md:text-2xl font-black tracking-tighter ${item.category === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                      {item.category === 'income' ? '+' : '-'}${Number(item.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}
-                    </p>
-                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => setEditItem({id: item.id, ...item})} className="text-slate-300 hover:text-emerald-500 p-2 hover:bg-emerald-50 rounded-xl transition">
-                            <Edit3 size={22} />
-                        </button>
-                        <button onClick={() => handleDelete(item.id)} className="text-slate-300 hover:text-rose-600 p-2 hover:bg-rose-50 rounded-xl transition">
-                            <Trash2 size={22} />
-                        </button>
-                    </div>
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>

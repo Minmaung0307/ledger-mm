@@ -48,7 +48,7 @@ export default function AddTransaction() {
           canvas.width = width; canvas.height = height;
           const ctx = canvas.getContext('2d');
           ctx?.drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL('image/jpeg', 0.7)); // 70% Quality
+          resolve(canvas.toDataURL('image/jpeg', 0.4)); // 40% Quality
         };
       };
     });
@@ -70,7 +70,8 @@ export default function AddTransaction() {
       let receiptUrl = "";
       if (preview) {
         // Firebase Storage မှာ နေရာအများကြီးမယူအောင် ကျုံ့ထားတဲ့ပုံကိုပဲ တင်မယ်
-        const storageRef = ref(storage, `receipts/${user.uid}/${Date.now()}.jpg`);
+        const currentYear = new Date().getFullYear();
+        const storageRef = ref(storage, `receipts/${user.uid}/${currentYear}/${Date.now()}.jpg`);
         const blob = base64ToBlob(preview);
         await uploadBytes(storageRef, blob);
         receiptUrl = await getDownloadURL(storageRef);

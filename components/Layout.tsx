@@ -16,6 +16,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<any>(null);
   const pathname = usePathname();
   const [isLoading, setIsLoading] = useState(true);
+  const login = () => signInWithPopup(auth, new GoogleAuthProvider());
+  const logout = () => signOut(auth);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
@@ -58,14 +60,46 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     </div>
   );
 
-  if (!user) return (
-    <div className="h-screen flex flex-col items-center justify-center bg-slate-50 p-6">
-       <h1 className="text-5xl font-black text-slate-900 mb-4 tracking-tighter">SimpleLedger</h1>
-       <button onClick={() => signInWithPopup(auth, new GoogleAuthProvider())} className="bg-white border-2 border-slate-200 p-5 rounded-[2rem] font-black shadow-xl flex items-center gap-3">
-         <img src="https://www.google.com/favicon.ico" className="w-5 h-5" /> CONTINUE WITH GOOGLE
-       </button>
-    </div>
-  );
+  if (!user) {
+    return (
+      <div className="h-screen w-full flex flex-col items-center justify-center bg-[#F8FAFC] relative overflow-hidden">
+        {/* အနောက်က Background အလှဆင်ခြင်း (Subtle Glow) */}
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-100 rounded-full blur-[120px] opacity-50"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-100 rounded-full blur-[120px] opacity-50"></div>
+
+        <div className="relative z-10 flex flex-col items-center max-w-sm w-full px-6">
+          {/* Logo Icon */}
+          <div className="mb-8 w-20 h-20 bg-emerald-600 rounded-[2.5rem] shadow-2xl shadow-emerald-200 flex items-center justify-center rotate-3 hover:rotate-0 transition-transform duration-500 group">
+              <FileBarChart size={40} className="text-white group-hover:scale-110 transition-transform" />
+          </div>
+
+          {/* Brand Name */}
+          <h1 className="text-5xl font-black text-slate-900 tracking-tighter mb-2">
+              Simple<span className="text-emerald-600 italic">Ledger</span>
+          </h1>
+          <p className="text-slate-400 font-bold text-center mb-12 leading-tight uppercase tracking-widest text-[10px]">
+              The Most Minimal Accounting for US SME
+          </p>
+
+          {/* --- တောက်တောက်ပြောင်ပြောင် Login Button --- */}
+          <button 
+              onClick={login} 
+              className="w-full flex items-center justify-center gap-4 bg-white border-2 border-slate-100 py-5 px-8 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.05)] hover:shadow-[0_20px_50px_rgba(16,185,129,0.15)] hover:border-emerald-500 transition-all duration-300 active:scale-95 group"
+          >
+            <img src="https://www.google.com/favicon.ico" className="w-6 h-6 object-contain" alt="google" />
+            <span className="font-black text-slate-800 text-lg tracking-tight group-hover:text-emerald-600 transition-colors">
+                CONTINUE WITH GOOGLE
+            </span>
+          </button>
+
+          {/* Footer Text */}
+          <p className="mt-12 text-[10px] font-black text-slate-300 uppercase tracking-[0.3em]">
+              Secure • Cloud • IRS Ready
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col md:flex-row font-sans">
@@ -95,13 +129,33 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </nav>
 
         <div className="mt-auto pt-6 border-t border-slate-100">
-           <Link href="/settings" className={`flex items-center gap-4 p-4 rounded-2xl font-bold mb-2 ${pathname === '/settings' ? 'text-emerald-600' : 'text-slate-400'}`}>
+          {/* User Info Section */}
+          <div className="flex items-center gap-3 px-2 mb-6 bg-slate-50 p-3 rounded-2xl border border-slate-100">
+              {user.photoURL ? (
+                  <img src={user.photoURL} className="w-10 h-10 rounded-xl border-2 border-white shadow-sm" alt="profile" />
+              ) : (
+                  <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-black">
+                      {user.displayName?.charAt(0) || 'U'}
+                  </div>
+              )}
+              <div className="overflow-hidden">
+                  <p className="text-sm font-black text-slate-900 truncate">{user.displayName}</p>
+                  <p className="text-[10px] font-bold text-slate-400 truncate uppercase tracking-widest">Premium User</p>
+              </div>
+          </div>
+
+          <Link href="/settings" className={`flex items-center gap-4 p-4 rounded-2xl font-bold mb-2 transition-all ${pathname === '/settings' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-900'}`}>
               <Settings size={20}/> Settings
-           </Link>
-           <button onClick={() => signOut(auth)} className="flex items-center gap-4 p-4 w-full text-rose-500 font-bold hover:bg-rose-50 rounded-2xl transition">
-              <LogOut size={20}/> Logout
-           </button>
-        </div>
+          </Link>
+
+          {/* ဒီနေရာမှာ onClick={logout} ကို ပြောင်းသုံးလိုက်ရင် အရောင်မမှိန်တော့ပါဘူး */}
+          <button 
+              onClick={logout} 
+              className="flex items-center gap-4 p-4 w-full text-rose-500 font-black hover:bg-rose-50 rounded-2xl transition-all active:scale-95 group"
+          >
+              <LogOut size={20} className="group-hover:-translate-x-1 transition-transform" /> Logout Session
+          </button>
+      </div>
       </aside>
 
       {/* Main Content */}

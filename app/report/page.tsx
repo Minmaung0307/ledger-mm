@@ -6,12 +6,13 @@ import { db, auth } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 import { TAX_CATEGORIES } from '@/lib/constants';
-import { Calendar, ExternalLink, FileBarChart, Printer, Download, ChevronDown, Info, PieChart, Landmark, AlertCircle } from 'lucide-react';
+import { Calendar, ExternalLink, FileBarChart, Printer, Download, ChevronDown, Info, PieChart, Landmark, AlertCircle, X } from 'lucide-react';
 
 export default function ProfitLossReport() {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [activeTip, setActiveTip] = useState<any>(null);
 
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: currentYear - 2024 + 2 }, (_, i) => 2024 + i);
@@ -230,17 +231,25 @@ export default function ProfitLossReport() {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {[
-              { line: "Line 1", title: "Sales & Income", color: "#10b981", text: "သင့်လုပ်ငန်းမှ ရရှိသော စုစုပေါင်းဝင်ငွေအားလုံးကို Line 1 တွင် ဖြည့်သွင်းရပါမည်။" },
-              { line: "Part III", title: "Ingredients & Supplies", color: "#f59e0b", text: "ရောင်းကုန်ထုတ်လုပ်ရန် တိုက်ရိုက်ဝယ်ယူရသော ကုန်ကြမ်းများကို Part III (COGS) တွင် ဖြည့်ပါ။" },
-              { line: "Line 18", title: "Software & Hardware", color: "#3b82f6", text: "Software နှင့် Tablet တို့လို ကုန်ကျစရိတ်များကို Line 18 တွင် ဖြည့်သွင်းနိုင်ပါသည်။" },
-              { line: "Line 24b", title: "Food & Beverages", color: "#f43f5e", text: "လုပ်ငန်းသုံးအတွက် ဝယ်ယူသော စားသောက်စရိတ်များကို Line 24b တွင် ၅၀% သာ ခုနှိမ်ခွင့်ရှိပါသည်။" },
-              { line: "Line 11", title: "Payroll (Contractors)", color: "#8b5cf6", text: "Payroll ထဲတွင် သင်ပေးချေခဲ့သော Contractor များ၏ စရိတ်များကို Line 11 တွင် ဖြည့်ပါ။" },
-              { line: "Line 9", title: "Car & Truck", color: "#64748b", text: "Gas, Repair သို့မဟုတ် Mileage Rate ကိုသုံးပြီး ဤနေရာတွင် ခုနှိမ်နိုင်ပါသည်။" },
-              { line: "Line 30", title: "Home Office", color: "#6366f1", text: "အိမ်မှ အလုပ်လုပ်ပါက ရေခိုး၊ မီးခိုး၊ အိမ်လစာများကို အချိုးကျ ဤနေရာတွင် ခုနှိမ်နိုင်ပါသည်။" },
-              { line: "Line 1040ES", title: "Tax Payments", color: "#0d9488", text: "၃ လတစ်ကြိမ် အစိုးရကို ကြိုပေးထားသော အခွန်ပမာဏကို ဤနေရာတွင် နှုတ်ရန် မမေ့ပါနှင့်။" }
+              { line: "Line 1", title: "Sales & Income", color: "#10b981", text: "သင့်လုပ်ငန်းမှ ရရှိသော စုစုပေါင်းဝင်ငွေအားလုံးကို Line 1 တွင် ဖြည့်သွင်းရပါမည်။", tip: "Credit Card, Zelle, Cash နဲ့ လက်ခံရရှိသမျှ အကုန်ပေါင်းထည့်ပါ။ 1099-K ဖောင် ရလာရင် ဒီကိန်းဂဏန်းနဲ့ တိုက်စစ်ပါ။" },
+              { line: "Part III", title: "Ingredients & Supplies", color: "#f59e0b", text: "ရောင်းကုန်ထုတ်လုပ်ရန် တိုက်ရိုက်ဝယ်ယူရသော ကုန်ကြမ်းများကို Part III (COGS) တွင် ဖြည့်ပါ။", tip: "ကုန်ပစ္စည်း ထုတ်လုပ်ဖို့ တိုက်ရိုက်ဝယ်ရတဲ့ (ဥပမာ- Wave ပါ Tuna/Foods) တွေကို ဒီမှာထည့်ပါ။ Inventory ကျန်တာရှိရင် နှုတ်ပေးဖို့ မမေ့ပါနဲ့။" },
+              { line: "Line 18", title: "Software & Hardware", color: "#3b82f6", text: "Software နှင့် Tablet တို့လို ကုန်ကျစရိတ်များကို Line 18 တွင် ဖြည့်သွင်းနိုင်ပါသည်။", tip: "$2,500 ထက်နည်းတဲ့ Laptop, Tablet တွေနဲ့ လစဉ်ကြေးပေးရတဲ့ Software တွေကို ဒီမှာ အပြည့်အဝ ခုနှိမ်နိုင်ပါတယ်။" },
+              { line: "Line 24b", title: "Food & Beverages", color: "#f43f5e", text: "လုပ်ငန်းသုံးအတွက် ဝယ်ယူသော စားသောက်စရိတ်များကို Line 24b တွင် ၅၀% သာ ခုနှိမ်ခွင့်ရှိပါသည်။", tip: "Client နဲ့ အလုပ်ကိစ္စ ဆွေးနွေးရင်း စားသောက်တဲ့ စရိတ်ကိုပဲ ခုနှိမ်ပါ။ Grocery ဝယ်တာကိုတော့ Personal expense လို့ သတ်မှတ်ပါတယ်။" },
+              { line: "Line 11", title: "Payroll (Contractors)", color: "#8b5cf6", text: "Payroll ထဲတွင် သင်ပေးချေခဲ့သော Contractor များ၏ စရိတ်များကို Line 11 တွင် ဖြည့်ပါ။", tip: "တစ်နှစ်အတွင်း တစ်ဦးတည်းကို $600 ကျော်ရင် 1099-NEC ဖောင် ထုတ်ပေးရပါမယ်။ SSN သို့မဟုတ် EIN တောင်းထားဖို့ လိုပါတယ်။" },
+              { line: "Line 9", title: "Car & Truck", color: "#64748b", text: "Gas, Repair သို့မဟုတ် Mileage Rate ကိုသုံးပြီး ဤနေရာတွင် ခုနှိမ်နိုင်ပါသည်။", tip: "အမှန်တကယ် ကုန်ကျတဲ့ ဆီဖိုးကို သုံးမလား၊ ဒါမှမဟုတ် IRS မိုင်နှုန်း ($0.67/mile) ကို သုံးမလား ရွေးချယ်နိုင်ပါတယ်။" },
+              { line: "Line 30", title: "Home Office", color: "#6366f1", text: "အိမ်မှ အလုပ်လုပ်ပါက ရေခိုး၊ မီးခိုး၊ အိမ်လစာများကို အချိုးကျ ဤနေရာတွင် ခုနှိမ်နိုင်ပါသည်။", tip: "သင့်အိမ်ရဲ့ အခန်းတစ်ခန်းကို အလုပ်အတွက် သီးသန့်သုံးရင် အဲဒီဧရိယာရဲ့ ရာခိုင်နှုန်းအလိုက် အိမ်လစာ၊ မီးဖိုးတွေကို နှုတ်နိုင်ပါတယ်။" },
+              { line: "Line 1040ES", title: "Tax Payments", color: "#0d9488", text: "၃ လတစ်ကြိမ် အစိုးရကို ကြိုပေးထားသော အခွန်ပမာဏကို ဤနေရာတွင် နှုတ်ရန် မမေ့ပါနှင့်။", tip: "Quarterly Estimated Tax ပေးထားတာတွေ ရှိရင် ဒီမှာ ပြန်နှုတ်မှသာ နှစ်ကုန်ရင် အခွန်ထပ်ဆောင်ရမှာ နည်းသွားမှာပါ။" }
             ].map((card, i) => (
-              <div key={i} className={`bg-white p-8 rounded-[2rem] border-2 border-slate-50 shadow-sm border-l-8 transition-all hover:shadow-md group relative overflow-hidden`} style={{ borderLeftColor: card.color }}>
-                <div className="absolute top-4 right-4 text-slate-200 group-hover:text-emerald-500 transition-colors"><Info size={20} /></div>
+              <div key={i} className="bg-white p-8 rounded-[2rem] border-2 border-slate-50 shadow-sm border-l-8 transition-all hover:shadow-md group relative overflow-hidden" style={{ borderLeftColor: card.color }}>
+                
+                {/* နှိပ်လို့ရမည့် Info ခလုတ်လေး ဖြစ်သွားပါပြီ */}
+                <button 
+                  onClick={() => setActiveTip(card)}
+                  className="absolute top-4 right-4 text-slate-200 hover:text-emerald-500 transition-colors bg-slate-50 p-2 rounded-full group-hover:bg-emerald-50"
+                >
+                    <Info size={24} />
+                </button>
+
                 <p className="font-black text-slate-400 text-[10px] mb-2 uppercase tracking-widest italic">{card.line}</p>
                 <h4 className="font-black text-slate-900 text-xl mb-3 underline decoration-slate-100 decoration-4">{card.title}</h4>
                 <p className="text-slate-500 text-xs font-bold leading-relaxed">{card.text}</p>
@@ -281,6 +290,24 @@ export default function ProfitLossReport() {
             ))}
           </div>
         </div>
+
+        {/* --- Tax Tip Pop-up (Modal) --- */}
+        {activeTip && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm no-print">
+            <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl p-10 relative animate-in zoom-in duration-200 border-4" style={{borderColor: activeTip.color}}>
+                <button onClick={() => setActiveTip(null)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900"><X size={28} /></button>
+                <div className="flex items-center gap-3 mb-6">
+                    <div className="p-3 rounded-2xl text-white shadow-lg" style={{backgroundColor: activeTip.color}}><AlertCircle size={24}/></div>
+                    <div>
+                        <p className="text-[10px] font-black uppercase opacity-50">{activeTip.line} Pro Tip</p>
+                        <h3 className="text-2xl font-black text-slate-900 tracking-tight">{activeTip.title}</h3>
+                    </div>
+                </div>
+                <p className="text-slate-600 font-bold leading-relaxed text-lg bg-slate-50 p-6 rounded-2xl border-2 border-slate-100 italic">"{activeTip.tip}"</p>
+                <button onClick={() => setActiveTip(null)} className="mt-8 w-full py-4 rounded-2xl font-black text-white shadow-xl hover:opacity-90 transition-all uppercase tracking-widest" style={{backgroundColor: activeTip.color}}>Got it, Thanks!</button>
+            </div>
+          </div>
+        )}
       </div>
     </Layout>
   );

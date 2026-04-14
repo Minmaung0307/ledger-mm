@@ -3,6 +3,8 @@ export const TAX_CATEGORIES = [
   { label: "Income / Sales", value: "income", type: "income" },
 
   // Expenses
+  { label: "Raw Materials (Ingredients)", value: "cogs_purchases", type: "expense" },
+  { label: "Produce (Produce/Supplies)", value: "produce", type: "expense" },
   { label: "Advertising", value: "advertising", type: "expense" },
   { label: "Car & Truck (Gas/Repairs)", value: "car_truck", type: "expense" },
   { label: "Business Mileage (@ $0.67/mile)", value: "mileage", type: "expense" }, // <--- Mileage

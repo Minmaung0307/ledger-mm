@@ -10,13 +10,29 @@ import {
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { auth } from '@/lib/firebase';
-import { onAuthStateChanged, signOut, signInWithRedirect, GoogleAuthProvider } from 'firebase/auth';
+import { onAuthStateChanged, signOut, signInWithPopup, signInWithRedirect, GoogleAuthProvider } from 'firebase/auth';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<any>(null);
   const pathname = usePathname();
   const [isLoading, setIsLoading] = useState(true);
-  const login = () => signInWithRedirect(auth, new GoogleAuthProvider());
+  const login = async () => {
+    const provider = new GoogleAuthProvider();
+    // အောက်က ၂ ကြောင်းကို ထည့်ပေးရင် ပိုစိတ်ချရပါတယ်
+    provider.setCustomParameters({ prompt: 'select_account' });
+    
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (error: any) {
+      console.error("Login Error:", error);
+      // အကယ်၍ Popup ကို Browser က ပိတ်ထားရင် Redirect နဲ့ ထပ်ကြိုးစားမယ်
+      if (error.code === 'auth/popup-blocked') {
+          await signInWithRedirect(auth, provider);
+      } else {
+          alert("Login failed: " + error.message);
+      }
+    }
+  };
   const logout = () => signOut(auth);
 
   useEffect(() => {

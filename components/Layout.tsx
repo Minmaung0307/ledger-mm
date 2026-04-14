@@ -128,15 +128,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <h1 className="text-xl font-black text-slate-900 tracking-tighter uppercase">SimpleLedger</h1>
         </div>
 
-        <nav className="space-y-8">
+        <nav className="space-y-4">
           {navGroups.map((group) => (
             <div key={group.group}>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 px-4">{group.group}</p>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1 px-4">{group.group}</p>
               <div className="space-y-1">
                 {group.items.map((item) => {
                   const isActive = pathname === item.href;
                   return (
-                    <Link key={item.label} href={item.href} className={`flex items-center gap-4 p-4 rounded-2xl font-bold transition-all ${isActive ? 'bg-emerald-600 text-white shadow-xl shadow-emerald-100' : 'text-slate-500 hover:bg-slate-50'}`}>
+                    <Link key={item.label} href={item.href} className={`flex items-center gap-4 py-2.5 px-4 rounded-2xl font-bold transition-all ${isActive ? 'bg-emerald-600 text-white shadow-xl shadow-emerald-100' : 'text-slate-500 hover:bg-slate-50'}`}>
                       {item.icon} <span>{item.label}</span>
                     </Link>
                   );

@@ -142,7 +142,7 @@ export default function TransactionsList() {
               <p className="p-24 text-center text-slate-300 font-black italic">No records found matching filters.</p>
             ) : (
               filteredTransactions.map((item) => (
-                <div key={item.id} className="p-6 md:p-8 flex justify-between items-center hover:bg-slate-50/50 transition border-b border-slate-50 group">
+                <div key={item.id} className="p-4 md:px-8 md:py-3 flex justify-between items-center hover:bg-slate-50/50 transition border-b last:border-0 border-slate-50 group">
                   <div className="flex-1">
                     <div className="flex items-center gap-4">
                       {/* အမှန်ခြစ်ခလုတ် - ဘဏ်စာရင်းနဲ့ တိုက်စစ်ပြီးရင် နှိပ်ရန် */}
@@ -162,7 +162,7 @@ export default function TransactionsList() {
                         </a>
                       )}
                     </div>
-                    <div className="flex items-center gap-4 mt-2 ml-10">
+                    <div className="flex items-center gap-4 mt-0.5 ml-10">
                       <span className="text-[10px] font-black px-4 py-1.5 bg-slate-100 text-slate-500 rounded-full uppercase tracking-widest">
                         {item.category.replace('_', ' ')}
                       </span>
@@ -172,8 +172,8 @@ export default function TransactionsList() {
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-4 md:gap-8">
-                    <p className={`text-2xl md:text-3xl font-black tracking-tighter ${item.category === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                  <div className="flex items-center gap-4 md:gap-6">
+                    <p className={`text-2xl md:text-2xl font-black tracking-tighter ${item.category === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
                       {item.category === 'income' ? '+' : '-'}${Number(item.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}
                     </p>
                     <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">

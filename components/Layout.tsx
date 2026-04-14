@@ -5,7 +5,8 @@ import {
   LayoutDashboard, Receipt, ShoppingCart, 
   Users, Landmark, FileBarChart, Settings, LogOut, 
   List,
-  ImageIcon
+  ImageIcon,
+  FileText
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -66,6 +67,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         { icon: <Landmark size={20}/>, label: 'Bank Accounts', href: '/banking' },
         { icon: <FileBarChart size={20}/>, label: 'Tax Reports (P&L)', href: '/report' },
         { icon: <List size={20}/>, label: 'Chart of Accounts', href: '/accounts' }, // Wave ရဲ့ Screenshot ထဲကဟာ
+        { icon: <FileText size={20}/>, label: 'Tax Filing Prep', href: '/tax-form' },
       ]
     }
   ];

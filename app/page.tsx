@@ -247,7 +247,7 @@ export default function Dashboard() {
           {transactions.length === 0 ? (
             <p className="p-16 text-center text-slate-300 font-bold italic">No financial activity recorded yet.</p>
           ) : (
-            transactions.slice(0, 5).map(item => (
+            transactions.slice(0, 10).map(item => (
               <div key={item.id} className="py-3 px-8 flex justify-between items-center hover:bg-slate-50 transition border-l-4 border-transparent hover:border-emerald-500">
                 <div className="flex items-center gap-3">
                   {/* Verify Check Icon (ရှိရင် ထည့်ပါ) */}

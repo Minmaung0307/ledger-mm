@@ -5,24 +5,60 @@ import Layout from '@/components/Layout';
 import { TAX_CATEGORIES } from '@/lib/constants';
 import { db, auth, storage } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore'; // getDocs, query, where ထပ်တိုးထားပါတယ်
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { Camera, Loader2, CheckCircle2 } from 'lucide-react';
+import { Camera, Loader2, Calendar as CalendarIcon, Landmark } from 'lucide-react';
+
+interface Account {
+  id: string;
+  name: string;
+  type: string;
+  uid: string;
+}
 
 export default function AddTransaction() {
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('other');
+  
+  // --- New States ---
+  const [bankAccount, setBankAccount] = useState(''); // Paid From
+  const [transDate, setTransDate] = useState(new Date().toISOString().split('T')[0]); // Transaction Date (Default Today)
+  const [accounts, setAccounts] = useState<Account[]>([]); // ဘဏ်အကောင့်စာရင်း
+  
   const [preview, setPreview] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => setUser(u));
+    const unsubscribe = onAuthStateChanged(auth, async (u) => {
+      setUser(u);
+      if (u) {
+        try {
+          const q = query(collection(db, "chart_of_accounts"), where("uid", "==", u.uid));
+          const snap = await getDocs(q);
+          
+          const accs = snap.docs.map(doc => ({ 
+              id: doc.id, 
+              ...doc.data() 
+          } as Account));
+
+          // ၁။ ရလာတဲ့ အကောင့်တွေကို State ထဲ ထည့်မယ် (ဒါဆိုရင် accs က အရောင်တောက်လာပါပြီ)
+          setAccounts(accs);
+
+          // ၂။ အကောင့်ရှိလျှင် ပထမဆုံးတစ်ခုကို Default အနေနဲ့ Dropdown မှာ ရွေးထားမယ်
+          if (accs.length > 0) {
+            setBankAccount(accs[0].name);
+          }
+          
+        } catch (err) {
+          console.error("Error fetching accounts:", err);
+        }
+      }
+    });
     return () => unsubscribe();
   }, []);
 
-  // Base64 to Blob helper
   const base64ToBlob = (base64: string) => {
     const byteString = atob(base64.split(',')[1]);
     const mimeString = base64.split(',')[0].split(':')[1].split(';')[0];
@@ -32,7 +68,6 @@ export default function AddTransaction() {
     return new Blob([ab], { type: mimeString });
   };
 
-  // Image Compression (ဆိုဒ်ကျုံ့ခြင်း)
   const compressImage = (file: File): Promise<string> => {
     return new Promise((resolve) => {
       const reader = new FileReader();
@@ -48,7 +83,7 @@ export default function AddTransaction() {
           canvas.width = width; canvas.height = height;
           const ctx = canvas.getContext('2d');
           ctx?.drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL('image/jpeg', 0.4)); // 40% Quality
+          resolve(canvas.toDataURL('image/jpeg', 0.4));
         };
       };
     });
@@ -69,7 +104,6 @@ export default function AddTransaction() {
     try {
       let receiptUrl = "";
       if (preview) {
-        // Firebase Storage မှာ နေရာအများကြီးမယူအောင် ကျုံ့ထားတဲ့ပုံကိုပဲ တင်မယ်
         const currentYear = new Date().getFullYear();
         const storageRef = ref(storage, `receipts/${user.uid}/${currentYear}/${Date.now()}.jpg`);
         const blob = base64ToBlob(preview);
@@ -82,8 +116,11 @@ export default function AddTransaction() {
         amount: parseFloat(amount),
         category,
         receiptUrl,
-        date: serverTimestamp(),
+        bankAccount, // သိမ်းမည့် ဘဏ်အကောင့်
+        transactionDate: new Date(transDate), // အမှန်တကယ်သုံးစွဲသည့်နေ့
+        date: serverTimestamp(), // စာရင်းသွင်းသည့်နေ့ (System Record)
         uid: user.uid,
+        verified: false
       });
       window.location.href = "/";
     } catch (error: any) {
@@ -112,22 +149,44 @@ export default function AddTransaction() {
             <input type="file" accept="image/*" capture="environment" onChange={handleFileChange} className="hidden" />
           </label>
 
-          {/* Form Fields */}
           <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl border border-slate-50 space-y-6">
+            {/* Merchant Name */}
             <div>
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Merchant Name / Description</label>
-                <input type="text" value={description} onChange={e => setDescription(e.target.value)} placeholder="e.g. Costco, Health Insurance" className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-900 focus:border-emerald-500 outline-none transition-all" required />
+                <input type="text" value={description} onChange={e => setDescription(e.target.value)} placeholder="e.g. Costco, Shell Gas" className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-900 focus:border-emerald-500 outline-none transition-all" required />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
+                {/* Amount */}
                 <div>
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Amount ($)</label>
                     <input type="number" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-2xl text-slate-900 focus:border-emerald-500 outline-none" required />
                 </div>
+                {/* Transaction Date Picker */}
+                <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Date of Purchase</label>
+                    <input type="date" value={transDate} onChange={e => setTransDate(e.target.value)} className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-900 focus:border-emerald-500 outline-none appearance-none" required />
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Category */}
                 <div>
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Category</label>
-                    <select value={category} onChange={e => setCategory(e.target.value)} className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold appearance-none outline-none">
+                    <select value={category} onChange={e => setCategory(e.target.value)} className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold appearance-none outline-none focus:border-emerald-500">
                         {TAX_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                    </select>
+                </div>
+                {/* Bank Account Selector */}
+                <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Paid From (Account)</label>
+                    <select value={bankAccount} onChange={e => setBankAccount(e.target.value)} className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold appearance-none outline-none focus:border-emerald-500">
+                        {accounts.length > 0 ? (
+                            accounts.map(acc => <option key={acc.id} value={acc.name}>{acc.name}</option>)
+                        ) : (
+                            <option value="">No Accounts Found</option>
+                        )}
+                        <option value="Cash/Other">Cash / Other</option>
                     </select>
                 </div>
             </div>

@@ -181,9 +181,14 @@ export default function TransactionsList() {
                             <span className={`text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest ${isIncome ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
                               {item.category.replace('_', ' ')}
                             </span>
-                            <span className="text-[10px] font-bold text-slate-300 uppercase italic">
-                              {item.date?.toDate().toLocaleDateString() || 'Recently'}
+                            {/* ဘဏ်အကောင့်နာမည်လေး ပြမယ် */}
+                            <span className="text-[9px] font-black px-3 py-1 bg-blue-50 text-blue-500 rounded-full uppercase tracking-widest italic">
+                              {item.bankAccount || 'Other'}
                             </span>
+                            <span className="text-[10px] font-bold text-slate-300 uppercase italic">
+                            {/* transactionDate ရှိရင် အဲဒါကိုပြမယ်၊ မရှိမှ entryDate ပြမယ် */}
+                            {item.transactionDate?.toDate().toLocaleDateString() || item.date?.toDate().toLocaleDateString()}
+                          </span>
                           </div>
                         </div>
                         

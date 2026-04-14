@@ -6,21 +6,23 @@ import { db, auth } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 import { TAX_CATEGORIES } from '@/lib/constants';
-import { Calendar, ExternalLink, FileBarChart, Printer, Download, ChevronDown } from 'lucide-react';
+import { Calendar, ExternalLink, FileBarChart, Printer, Download, ChevronDown, Info, PieChart } from 'lucide-react';
 
 export default function ProfitLossReport() {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
+  // ၁။ နှစ်များကို Dynamic ထုတ်ပေးခြင်း (၂၀၂၄ မှ လက်ရှိနှစ် + ၁ နှစ် အထိ)
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: currentYear - 2024 + 2 }, (_, i) => 2024 + i);
+
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       if (user) {
-        // ၁။ ရွေးချယ်ထားသော နှစ်၏ အစနှင့် အဆုံးကို သတ်မှတ်မယ်
         const startOfYear = new Date(selectedYear, 0, 1);
         const endOfYear = new Date(selectedYear, 11, 31, 23, 59, 59);
 
-        // ၂။ Firebase Query မှာ နေ့စွဲအလိုက် စစ်ထုတ်မယ်
         const q = query(
           collection(db, "transactions"),
           where("uid", "==", user.uid),
@@ -32,37 +34,32 @@ export default function ProfitLossReport() {
         const unsubscribeData = onSnapshot(q, (snapshot) => {
           setData(snapshot.docs.map(doc => doc.data()));
           setLoading(false);
-        }, (error) => {
-            console.error("Query Error:", error);
-            // Index လိုအပ်ပါက console မှာ link ပေါ်လာပါလိမ့်မယ်
-            setLoading(false);
-        });
+        }, () => setLoading(false));
 
         return () => unsubscribeData();
       }
     });
     return () => unsubscribeAuth();
-  }, [selectedYear]); // <--- selectedYear ပြောင်းတိုင်း data အသစ်ပြန်ဆွဲမယ်
+  }, [selectedYear]);
 
-  const calculateTotal = (catType: string) => {
-    return data
-      .filter(item => {
-        const cat = TAX_CATEGORIES.find(c => c.value === item.category);
-        return cat?.type === catType;
-      })
-      .reduce((sum, item) => sum + item.amount, 0);
+  const calculateTotal = (catValue: string) => {
+    return data.filter(d => d.category === catValue).reduce((s, i) => s + i.amount, 0);
   };
 
-  const income = calculateTotal('income');
-  const expenses = calculateTotal('expense');
+  const income = data.filter(item => {
+    const cat = TAX_CATEGORIES.find(c => c.value === item.category);
+    return cat?.type === 'income';
+  }).reduce((sum, item) => sum + item.amount, 0);
+
+  const expenses = data.filter(item => {
+    const cat = TAX_CATEGORIES.find(c => c.value === item.category);
+    return cat?.type === 'expense';
+  }).reduce((sum, item) => sum + item.amount, 0);
 
   const exportCSV = () => {
     if (data.length === 0) return alert("No records to export.");
     const headers = "Date,Description,Category,Amount\n";
-    const rows = data.map(t => {
-      const date = t.date?.toDate().toLocaleDateString() || "N/A";
-      return `${date},${t.description},${t.category},${t.amount}`;
-    }).join("\n");
+    const rows = data.map(t => `${t.date?.toDate().toLocaleDateString() || "N/A"},${t.description},${t.category},${t.amount}`).join("\n");
     const blob = new Blob([headers + rows], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -75,25 +72,29 @@ export default function ProfitLossReport() {
 
   return (
     <Layout>
-      <div className="pt-6 pb-20 max-w-4xl mx-auto">
+      <div className="pt-6 pb-40 max-w-5xl mx-auto px-4">
         
-        {/* --- Header Section with Year Selector --- */}
+        {/* --- Header Section with Dynamic Year Selector --- */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12 no-print">
-            <div>
-                <h2 className="text-4xl font-black text-slate-900 tracking-tighter uppercase">Profit & Loss</h2>
-                
-                {/* Year Dropdown Selector */}
-                <div className="mt-4 relative inline-block group">
-                    <select 
-                        value={selectedYear}
-                        onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                        className="appearance-none bg-emerald-50 border-2 border-emerald-100 text-emerald-700 px-6 py-2 pr-10 rounded-xl font-black text-sm outline-none cursor-pointer hover:bg-emerald-100 transition-all shadow-sm"
-                    >
-                        {[2024, 2025, 2026, 2027].map(year => (
-                            <option key={year} value={year}>{year} TAX YEAR</option>
-                        ))}
-                    </select>
-                    <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-500 pointer-events-none" />
+            <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-emerald-600 rounded-2xl flex items-center justify-center text-white shadow-xl">
+                    <Calendar size={28} /> {/* Calendar Icon တောက်တောက်လေး ဖြစ်သွားပါပြီ */}
+                </div>
+                <div>
+                    <h2 className="text-4xl font-black text-slate-900 tracking-tighter uppercase italic">Tax Report</h2>
+                    
+                    <div className="mt-2 relative inline-block group">
+                        <select 
+                            value={selectedYear}
+                            onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                            className="appearance-none bg-slate-100 border-2 border-slate-200 text-slate-700 px-4 py-1.5 pr-10 rounded-xl font-black text-sm outline-none cursor-pointer hover:bg-slate-200 transition-all"
+                        >
+                            {years.reverse().map(year => (
+                                <option key={year} value={year}>{year} FISCAL YEAR</option>
+                            ))}
+                        </select>
+                        <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    </div>
                 </div>
             </div>
             
@@ -107,12 +108,6 @@ export default function ProfitLossReport() {
             </div>
         </div>
 
-        {/* --- Print Header (Only visible when printing) --- */}
-        <div className="hidden print:block mb-8 border-b-4 border-slate-900 pb-4">
-            <h1 className="text-3xl font-black uppercase">Profit & Loss Statement - {selectedYear}</h1>
-            <p className="font-bold text-slate-500">Business Financial Summary</p>
-        </div>
-
         <style jsx global>{`
           @media print {
             aside, nav, .no-print { display: none !important; }
@@ -121,18 +116,21 @@ export default function ProfitLossReport() {
           }
         `}</style>
 
-        {/* P&L Table */}
+        {/* --- Main P&L Table --- */}
         <div className="bg-white rounded-[3rem] shadow-2xl overflow-hidden border border-slate-100 mb-16">
             <div className="p-10 border-b-8 border-emerald-500">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Total Operating Income ({selectedYear})</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 italic">Total Operating Income ({selectedYear})</p>
                 <h3 className="text-5xl font-black text-slate-900">${income.toLocaleString(undefined, {minimumFractionDigits: 2})}</h3>
             </div>
 
             <div className="p-10 space-y-8 bg-slate-50/30">
-                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Operating Expenses (Deductions)</h4>
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] flex items-center gap-2">
+                    <PieChart size={14} className="text-rose-500"/> Operating Deductions
+                </h4>
                 <div className="space-y-4">
                     {TAX_CATEGORIES.filter(c => c.type === 'expense').map(cat => {
-                        const total = data.filter(d => d.category === cat.value).reduce((s, i) => s + i.amount, 0);
+                        const total = calculateTotal(cat.value);
+                        if (total === 0) return null;
                         return (
                             <div key={cat.value} className="flex justify-between items-center group">
                                 <p className="font-bold text-slate-500 group-hover:text-slate-900 transition text-sm">{cat.label}</p>
@@ -155,7 +153,7 @@ export default function ProfitLossReport() {
             </div>
         </div>
 
-        {/* --- Mapping Guide Section --- */}
+        {/* --- Mapping Guide Section (Updated with 8 Cards) --- */}
         <div className="mt-24 border-t-4 border-slate-100 pt-12 no-print">
           <h3 className="text-3xl font-black text-slate-900 mb-8 tracking-tighter flex items-center gap-3">
              <span className="bg-emerald-600 text-white p-2 rounded-lg inline-flex shadow-lg shadow-emerald-100"><FileBarChart size={24}/></span>
@@ -169,10 +167,16 @@ export default function ProfitLossReport() {
               { line: "Line 18", title: "Software & Hardware", color: "blue", text: "Software နှင့် Tablet တို့လို ကုန်ကျစရိတ်များကို Line 18 တွင် ဖြည့်သွင်းနိုင်ပါသည်။" },
               { line: "Line 24b", title: "Food & Beverages", color: "rose", text: "လုပ်ငန်းသုံးအတွက် ဝယ်ယူသော စားသောက်စရိတ်များကို Line 24b တွင် ၅၀% သာ ခုနှိမ်ခွင့်ရှိပါသည်။" },
               { line: "Line 11", title: "Payroll (Contractors)", color: "violet", text: "Payroll ထဲတွင် သင်ပေးချေခဲ့သော Contractor များ၏ စရိတ်များကို Line 11 တွင် ဖြည့်ပါ။" },
-              { line: "Line 9", title: "Car & Truck", color: "slate", text: "Gas, Repair သို့မဟုတ် Mileage Rate ကိုသုံးပြီး ဤနေရာတွင် ခုနှိမ်နိုင်ပါသည်။" }
+              { line: "Line 9", title: "Car & Truck", color: "slate", text: "Gas, Repair သို့မဟုတ် Mileage Rate ကိုသုံးပြီး ဤနေရာတွင် ခုနှိမ်နိုင်ပါသည်။" },
+              { line: "Line 30", title: "Home Office", color: "indigo", text: "အိမ်မှ အလုပ်လုပ်ပါက ရေခိုး၊ မီးခိုး၊ အိမ်လစာများကို အချိုးကျ ဤနေရာတွင် ခုနှိမ်နိုင်ပါသည်။" },
+              { line: "Line 27a", title: "Other Expenses", color: "teal", text: "ကျန်းမာရေးအာမခံနှင့် အထွေထွေအသုံးစရိတ်များကို ဤနေရာတွင် စုပေါင်းဖြည့်သွင်းပါ။" }
             ].map((card, i) => (
-              <div key={i} className={`bg-white p-8 rounded-[2rem] border-2 border-slate-50 shadow-sm border-l-8 border-l-${card.color}-500`}>
-                <p className={`font-black text-${card.color}-600 text-[10px] mb-2 uppercase tracking-widest italic`}>{card.line}</p>
+              <div key={i} className={`bg-white p-8 rounded-[2rem] border-2 border-slate-50 shadow-sm border-l-8 transition-all hover:shadow-md group relative overflow-hidden`} style={{ borderLeftColor: `var(--${card.color}-500)` }}>
+                {/* Info Icon integration */}
+                <div className="absolute top-4 right-4 text-slate-200 group-hover:text-emerald-500 transition-colors">
+                    <Info size={20} />
+                </div>
+                <p className="font-black text-slate-400 text-[10px] mb-2 uppercase tracking-widest italic">{card.line}</p>
                 <h4 className="font-black text-slate-900 text-xl mb-3 underline decoration-slate-100 decoration-4">{card.title}</h4>
                 <p className="text-slate-500 text-xs font-bold leading-relaxed">{card.text}</p>
               </div>

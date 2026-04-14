@@ -6,21 +6,22 @@ import { db, auth } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, query, orderBy, onSnapshot, where } from 'firebase/firestore';
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import { Plus, ChevronDown } from 'lucide-react'; // Plus icon ကို ဒီမှာသွင်းထားပါတယ်
-import Link from 'next/link'; // Link ကို ဒီမှာသွင်းထားပါတယ်
+import { Plus, ChevronDown, CheckCircle2, AlertCircle } from 'lucide-react';
+import Link from 'next/link';
 
 export default function Dashboard() {
   const [transactions, setTransactions] = useState<any[]>([]);
-  const [stats, setStats] = useState({ income: 0, expenses: 0 });
+  const [stats, setStats] = useState({ income: 0, expenses: 0, estimatedPaid: 0 });
   const [chartData, setChartData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
   const [monthlyStats, setMonthlyStats] = useState({ inc: 0, exp: 0 });
+  const [showAddMenu, setShowAddMenu] = useState(false);
 
+  // စာရင်းတွက်ချက်မှုများ (Derived States)
   const netProfit = stats.income - stats.expenses;
-  const estimatedTax = netProfit > 0 ? netProfit * 0.153 : 0; 
-
-  const [showAddMenu, setShowAddMenu] = useState(false); // အပေါ်နားက state ထဲမှာ ထည့်ပါ
+  const taxLiability = netProfit > 0 ? netProfit * 0.153 : 0; // ၁၅.၃% SE Tax
+  const remainingTax = taxLiability - stats.estimatedPaid; // ဆောင်ရန်ကျန်ငွေ
 
   useEffect(() => {
     setIsMounted(true);
@@ -38,36 +39,41 @@ export default function Dashboard() {
 
           let totalInc = 0; 
           let totalExp = 0;
-          let currentMonthInc = 0;
-          let currentMonthExp = 0;
+          let totalEstPaid = 0;
+          let curMonthInc = 0;
+          let curMonthExp = 0;
           const monthlyDataMap: any = {};
-          
           const now = new Date();
 
           data.forEach((item: any) => {
             const date = item.date?.toDate() || new Date();
             const monthLabel = date.toLocaleString('default', { month: 'short' });
             
+            // ၁။ Total တွက်ချက်ခြင်း
             if (item.category === 'income') {
               totalInc += item.amount;
+            } else if (item.category === 'estimated_tax_paid') {
+              totalEstPaid += item.amount; // အခွန်ကြိုပေးငွေ
             } else {
-              totalExp += item.amount;
+              totalExp += item.amount; // တခြားအသုံးစရိတ်များ
             }
 
+            // ၂။ Chart အတွက် စုစည်းခြင်း
             if (!monthlyDataMap[monthLabel]) {
               monthlyDataMap[monthLabel] = { month: monthLabel, income: 0, expense: 0 };
             }
             if (item.category === 'income') monthlyDataMap[monthLabel].income += item.amount;
-            else monthlyDataMap[monthLabel].expense += item.amount;
+            else if (item.category !== 'estimated_tax_paid') monthlyDataMap[monthLabel].expense += item.amount;
 
+            // ၃။ ယခုလအတွက် တွက်ချက်ခြင်း
             if (date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear()) {
-              if (item.category === 'income') currentMonthInc += item.amount;
-              else currentMonthExp += item.amount;
+              if (item.category === 'income') curMonthInc += item.amount;
+              else if (item.category !== 'estimated_tax_paid') curMonthExp += item.amount;
             }
           });
 
-          setStats({ income: totalInc, expenses: totalExp });
-          setMonthlyStats({ inc: currentMonthInc, exp: currentMonthExp });
+          setStats({ income: totalInc, expenses: totalExp, estimatedPaid: totalEstPaid });
+          setMonthlyStats({ inc: curMonthInc, exp: curMonthExp });
           setChartData(Object.values(monthlyDataMap).reverse().slice(-6)); 
           setLoading(false);
         });
@@ -77,19 +83,18 @@ export default function Dashboard() {
     return () => unsubscribeAuth();
   }, []);
 
-  if (loading) return <Layout><p className="p-20 text-center font-black animate-pulse text-slate-400 uppercase tracking-widest">Syncing Data...</p></Layout>;
+  if (loading) return <Layout><p className="p-20 text-center font-black animate-pulse text-slate-400 uppercase tracking-widest">Syncing Financials...</p></Layout>;
 
   return (
     <Layout>
-      {/* Header Section with Integrated Add Button */}
+      {/* Header Section */}
       <header className="mb-10 pt-4 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h2 className="text-4xl font-black text-slate-900 tracking-tight">Financial Trends</h2>
-          <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.2em] mt-1 italic">Real-time Performance</p>
+          <h2 className="text-4xl font-black text-slate-900 tracking-tighter uppercase italic">Business Insights</h2>
+          <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.2em] mt-1">Real-time Performance Metrics</p>
         </div>
         
-        {/* Quick Action Dropdown */}
-        <div className="relative group">
+        <div className="relative">
           <button 
             onClick={() => setShowAddMenu(!showAddMenu)}
             className="bg-emerald-600 text-white px-8 py-4 rounded-2xl font-black text-xs shadow-xl flex items-center gap-3 hover:bg-emerald-700 transition-all active:scale-95"
@@ -101,18 +106,18 @@ export default function Dashboard() {
             <>
               <div className="fixed inset-0 z-40" onClick={() => setShowAddMenu(false)}></div>
               <div className="absolute right-0 mt-2 w-64 bg-white rounded-3xl shadow-2xl border border-slate-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
-                <Link href="/add" className="flex items-center gap-3 p-5 hover:bg-slate-50 font-black text-slate-700 border-b border-slate-50">
+                <Link href="/add" className="flex items-center gap-3 p-5 hover:bg-slate-50 font-black text-slate-700 border-b border-slate-50 transition">
                   <div className="w-8 h-8 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center"><Plus size={16}/></div>
                   Add Income / Expense
                 </Link>
-                <Link href="/invoices/add" className="flex items-center gap-3 p-5 hover:bg-slate-50 font-black text-slate-700 border-b border-slate-50">
+                <Link href="/invoices/add" className="flex items-center gap-3 p-5 hover:bg-slate-50 font-black text-slate-700 border-b border-slate-50 transition">
                   <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center"><Plus size={16}/></div>
-                  Create New Invoice
+                  Create Invoice
                 </Link>
                 <Link href="/add" className="flex items-center gap-3 p-5 hover:bg-slate-50 font-black text-emerald-600 transition italic">
-                      <div className="w-8 h-8 bg-emerald-600 text-white rounded-lg flex items-center justify-center"><Plus size={16}/></div>
-                      Scan Receipt (AI)
-                    </Link>
+                    <div className="w-8 h-8 bg-emerald-600 text-white rounded-lg flex items-center justify-center"><Plus size={16}/></div>
+                    Scan Receipt
+                </Link>
               </div>
             </>
           )}
@@ -121,13 +126,11 @@ export default function Dashboard() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-        <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border-b-8 border-emerald-500 relative overflow-hidden group">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Revenue</p>
+        <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border-b-8 border-emerald-500 relative">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Gross Revenue</p>
           <p className="text-4xl font-black text-emerald-600 mt-2">${stats.income.toLocaleString()}</p>
           <div className="mt-4 pt-4 border-t border-slate-50">
-             <p className="text-[11px] font-bold text-slate-400 italic">
-                This month: <span className="text-emerald-500 font-black">+${monthlyStats.inc.toLocaleString()}</span>
-             </p>
+             <p className="text-[11px] font-bold text-slate-400 italic">This month: <span className="text-emerald-500 font-black">+${monthlyStats.inc.toLocaleString()}</span></p>
           </div>
         </div>
 
@@ -135,42 +138,52 @@ export default function Dashboard() {
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Expenses</p>
           <p className="text-4xl font-black text-rose-500 mt-2">${stats.expenses.toLocaleString()}</p>
           <div className="mt-4 pt-4 border-t border-slate-50">
-             <p className="text-[11px] font-bold text-slate-400 italic">
-                This month: <span className="text-rose-500 font-black">-${monthlyStats.exp.toLocaleString()}</span>
-             </p>
+             <p className="text-[11px] font-bold text-slate-400 italic">This month: <span className="text-rose-500 font-black">-${monthlyStats.exp.toLocaleString()}</span></p>
           </div>
         </div>
 
-        <div className="bg-slate-900 p-8 rounded-[2.5rem] shadow-xl text-white">
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Taxable Profit</p>
-          <p className="text-4xl font-black text-white mt-2">${(stats.income - stats.expenses).toLocaleString()}</p>
-          <div className="mt-4 pt-4 border-t border-slate-800">
-             <p className="text-[11px] font-bold text-slate-500 italic">
-                Net Margin: <span className="text-emerald-400 font-black">${(monthlyStats.inc - monthlyStats.exp).toLocaleString()}</span>
-             </p>
+        <div className="bg-slate-900 p-8 rounded-[2.5rem] shadow-xl text-white relative overflow-hidden">
+          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Net Taxable Profit</p>
+          <p className="text-4xl font-black text-white mt-2">${netProfit.toLocaleString()}</p>
+          <div className="mt-4 pt-4 border-t border-slate-800 flex justify-between">
+             <p className="text-[11px] font-bold text-slate-500 italic">Net Margin: <span className="text-emerald-400 font-black">${(monthlyStats.inc - monthlyStats.exp).toLocaleString()}</span></p>
           </div>
         </div>
       </div>
 
-      {/* Tax Estimator Card */}
-      <div className="mt-10 bg-amber-500 p-10 rounded-[3rem] shadow-2xl text-white relative overflow-hidden mb-12">
-        <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full -mr-16 -mt-16 blur-3xl"></div>
-        <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-8 text-center md:text-left">
+      {/* --- Advanced Tax Estimator Card --- */}
+      <div className="mt-10 bg-amber-500 p-10 rounded-[3.5rem] shadow-2xl text-white relative overflow-hidden mb-12">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl"></div>
+        <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
           <div>
-            <p className="text-amber-100 font-black uppercase text-[10px] tracking-widest mb-3 opacity-80 underline decoration-2 underline-offset-4">Estimated US Self-Employment Tax (15.3%)</p>
-            <h3 className="text-6xl font-black tracking-tighter">${estimatedTax.toLocaleString(undefined, {minimumFractionDigits: 2})}</h3>
-            <p className="text-amber-100 text-[10px] font-bold mt-4 italic opacity-70">*Based on current YTD Net Profit. Consult an accountant for final filing.</p>
+            <p className="text-amber-100 font-black uppercase text-[11px] tracking-widest mb-4 flex items-center gap-2">
+                <AlertCircle size={16}/> ESTIMATED US SELF-EMPLOYMENT TAX (15.3%)
+            </p>
+            <h3 className="text-6xl font-black tracking-tighter">${taxLiability.toLocaleString(undefined, {minimumFractionDigits: 2})}</h3>
+            <p className="text-amber-100 text-[10px] font-bold mt-4 italic opacity-80">*Based on your business net profit for the current year.</p>
           </div>
-          <div className="bg-white/20 px-8 py-6 rounded-[2rem] backdrop-blur-md border border-white/30 text-center shadow-inner">
-              <p className="text-[10px] font-black uppercase tracking-widest mb-1 opacity-60">Tax Deadline</p>
-              <p className="text-2xl font-black">APRIL 15</p>
+          
+          <div className="bg-white/20 p-8 rounded-[2.5rem] backdrop-blur-md border border-white/30 shadow-inner">
+             <div className="flex justify-between items-center mb-4 border-b border-white/10 pb-4">
+                <p className="text-[10px] font-black uppercase tracking-widest opacity-80 text-white">Already Paid:</p>
+                <p className="text-lg font-black text-white">-${stats.estimatedPaid.toLocaleString()}</p>
+             </div>
+             <div className="flex justify-between items-end">
+                <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-white/60">Balance Due:</p>
+                    <p className="text-3xl font-black text-white">
+                        {remainingTax > 0 ? `$${remainingTax.toLocaleString()}` : "$0.00"}
+                    </p>
+                </div>
+                {remainingTax <= 0 && <CheckCircle2 size={32} className="text-emerald-300" />}
+             </div>
           </div>
         </div>
       </div>
 
       {/* Chart Section */}
       <div className="bg-white p-8 md:p-12 rounded-[3.5rem] shadow-2xl border-2 border-slate-50 mb-14 overflow-hidden">
-        <h3 className="font-black text-slate-900 uppercase text-xs tracking-widest mb-10 text-center">Cash Flow Analysis (Last 6 Months)</h3>
+        <h3 className="font-black text-slate-900 uppercase text-xs tracking-widest mb-10 text-center italic tracking-[0.3em]">Cash Flow Analysis</h3>
         <div className="h-[350px] w-full min-h-[350px]"> 
           {isMounted && chartData.length > 0 && (
             <ResponsiveContainer width="100%" height="100%">
@@ -178,10 +191,7 @@ export default function Dashboard() {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#cbd5e1', fontWeight: 'bold', fontSize: 11}} />
                 <YAxis axisLine={false} tickLine={false} tick={{fill: '#cbd5e1', fontSize: 11}} />
-                <Tooltip 
-                  cursor={{fill: '#f8fafc'}}
-                  contentStyle={{borderRadius: '24px', border: 'none', boxShadow: '0 25px 50px -12px rgb(0 0 0 / 0.15)', fontWeight: 'bold', padding: '15px'}} 
-                />
+                <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={{borderRadius: '24px', border: 'none', boxShadow: '0 25px 50px -12px rgb(0 0 0 / 0.15)', fontWeight: 'bold'}} />
                 <Bar dataKey="income" fill="#10b981" radius={[10, 10, 0, 0]} barSize={40} />
                 <Bar dataKey="expense" fill="#f43f5e" radius={[10, 10, 0, 0]} barSize={40} />
               </BarChart>
@@ -190,23 +200,25 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Recent Activity */}
+      {/* Recent Ledger Activity */}
       <div className="bg-white rounded-[3rem] shadow-xl border-2 border-slate-50 overflow-hidden mb-16">
         <div className="p-8 border-b-2 border-slate-50 bg-slate-50/30 flex justify-between items-center">
-            <h3 className="font-black text-slate-900 uppercase text-[11px] tracking-widest italic">Recent Ledger Activity</h3>
-            <Link href="/transactions" className="text-[10px] font-black text-emerald-600 hover:underline">VIEW ALL</Link>
+            <h3 className="font-black text-slate-900 uppercase text-[11px] tracking-widest italic underline decoration-emerald-500 decoration-4 underline-offset-4">Recent Transactions</h3>
+            <Link href="/transactions" className="text-[10px] font-black text-emerald-600 hover:underline">VIEW LEDGER</Link>
         </div>
         <div className="divide-y-2 divide-slate-50">
           {transactions.length === 0 ? (
-            <p className="p-16 text-center text-slate-300 font-bold italic">Waiting for your first record...</p>
+            <p className="p-16 text-center text-slate-300 font-bold italic">No financial activity recorded yet.</p>
           ) : (
             transactions.slice(0, 5).map(item => (
               <div key={item.id} className="p-8 flex justify-between items-center hover:bg-slate-50 transition border-l-4 border-transparent hover:border-emerald-500">
                 <div>
                   <p className="font-black text-slate-900 text-xl tracking-tight">{item.description}</p>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{item.category.replace('_', ' ')}</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                    {item.category === 'estimated_tax_paid' ? 'Tax Payment' : item.category.replace('_', ' ')}
+                  </p>
                 </div>
-                <p className={`text-2xl md:text-3xl font-black tracking-tighter ${item.category === 'income' ? 'text-emerald-500' : 'text-rose-500'}`}>
+                <p className={`text-2xl md:text-3xl font-black tracking-tighter ${item.category === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
                   {item.category === 'income' ? '+' : '-'}${Number(item.amount).toLocaleString()}
                 </p>
               </div>

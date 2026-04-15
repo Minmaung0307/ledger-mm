@@ -170,7 +170,7 @@ export default function TransactionsList() {
                           <div className="flex flex-wrap items-center gap-3 mt-1">
                             <span className={`text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest ${isIncome ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>{item.category.replace('_', ' ')}</span>
                             <span className="text-[9px] font-black px-3 py-1 bg-blue-50 text-blue-500 rounded-full uppercase tracking-widest italic">{item.bankAccount || 'Other'}</span>
-                            <span className="text-[10px] font-bold text-slate-300 uppercase italic">{(item.transactionDate?.toDate() || item.date?.toDate())?.toLocaleDateString()}</span>
+                            <span className="text-[10px] font-bold text-slate-300 uppercase italic">{(item.transactionDate?.toDate?.() || item.date?.toDate?.() || new Date()).toLocaleDateString()}</span>
                           </div>
                         </div>
                         {item.receiptUrl && <a href={item.receiptUrl} target="_blank" className="text-emerald-500 bg-emerald-50 p-2 rounded-xl hover:bg-emerald-500 hover:text-white shadow-sm transition"><ImageIcon size={18} /></a>}

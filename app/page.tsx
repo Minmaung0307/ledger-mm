@@ -52,31 +52,38 @@ export default function Dashboard() {
         );
 
         const unsubscribeData = onSnapshot(q, (snapshot) => {
-          // payload error ကာကွယ်ရန် snapshot ရှိ၊ မရှိ အရင်စစ်ပါ
-          if (!snapshot || snapshot.empty) {
-            setTransactions([]);
-            setStats({ income: 0, expenses: 0, estimatedPaid: 0 });
-            setChartData([]);
-            setLoading(false);
-            return;
-          }
+          if (!snapshot) return;
 
-          const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          const data = snapshot.docs.map(doc => {
+            const item = doc.data();
+            // serverTimestamp ပြန်မကျလာသေးခင် error မတက်အောင် စစ်တာပါ
+            const safeDate = item.transactionDate?.toDate?.() || item.date?.toDate?.() || new Date();
+            
+            return {
+              id: doc.id,
+              ...item,
+              displayDate: safeDate // အောက်မှာ သုံးဖို့ သီးသန့် Date တစ်ခု ထုတ်ထားမယ်
+            };
+          });
+
           setTransactions(data);
 
-          let totalInc = 0, totalExp = 0, totalEstPaid = 0;
-          let curMonthInc = 0, curMonthExp = 0;
+          let totalInc = 0; let totalExp = 0; let totalEstPaid = 0;
+          let curMonthInc = 0; let curMonthExp = 0;
           const monthlyDataMap: any = {};
           const now = new Date();
 
           data.forEach((item: any) => {
-            // item.date ရှိမှ toDate() ခေါ်ပါ (Payload error ကာကွယ်ရန်)
-            const date = item.transactionDate?.toDate() || item.date?.toDate() || new Date();
+            const date = item.displayDate; // ခုနက safeDate ကို သုံးမယ်
             const monthLabel = date.toLocaleString('default', { month: 'short' });
             
-            if (item.category === 'income') totalInc += item.amount;
-            else if (item.category === 'estimated_tax_paid') totalEstPaid += item.amount;
-            else totalExp += item.amount;
+            if (item.category === 'income') {
+              totalInc += item.amount;
+            } else if (item.category === 'estimated_tax_paid') {
+              totalEstPaid += item.amount;
+            } else {
+              totalExp += item.amount;
+            }
 
             if (!monthlyDataMap[monthLabel]) {
               monthlyDataMap[monthLabel] = { month: monthLabel, income: 0, expense: 0 };

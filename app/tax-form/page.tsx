@@ -4,18 +4,20 @@ import { useEffect, useState } from 'react';
 import Layout from '@/components/Layout';
 import { db, auth } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy, doc, getDoc } from 'firebase/firestore'; // doc, getDoc ထည့်လိုက်ပါပြီ
 import { TAX_CATEGORIES } from '@/lib/constants';
 import { Printer, FileCheck, Info } from 'lucide-react';
 
 export default function TaxFormWorksheet() {
   const [data, setData] = useState<any[]>([]);
+  const [profile, setProfile] = useState<any>(null); // profile state ကို သတ်မှတ်လိုက်ပါပြီ
   const [loading, setLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
   useEffect(() => {
-    onAuthStateChanged(auth, (user) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       if (user) {
+        // ၁။ Transactions Data ဆွဲယူခြင်း
         const start = new Date(selectedYear, 0, 1);
         const end = new Date(selectedYear, 11, 31, 23, 59, 59);
         const q = query(
@@ -25,12 +27,22 @@ export default function TaxFormWorksheet() {
           where("date", "<=", end),
           orderBy("date", "desc")
         );
+        
         onSnapshot(q, (snap) => {
           setData(snap.docs.map(doc => doc.data()));
-          setLoading(false);
         });
+
+        // ၂။ Business Profile (Tax Preparer Info) ဆွဲယူခြင်း
+        const profRef = doc(db, "profiles", user.uid);
+        const profSnap = await getDoc(profRef);
+        if (profSnap.exists()) {
+          setProfile(profSnap.data());
+        }
+
+        setLoading(false);
       }
     });
+    return () => unsubscribeAuth();
   }, [selectedYear]);
 
   const getSum = (cat: string) => data.filter(d => d.category === cat).reduce((s, i) => s + i.amount, 0);
@@ -61,7 +73,6 @@ export default function TaxFormWorksheet() {
     <Layout>
       <div className="pt-4 pb-40 max-w-4xl mx-auto px-4">
         
-        {/* Actions - No Print */}
         <div className="flex justify-between items-center mb-8 no-print">
           <div>
             <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase">Tax Preparation</h2>
@@ -72,9 +83,7 @@ export default function TaxFormWorksheet() {
           </button>
         </div>
 
-        {/* --- The Digital Worksheet --- */}
         <div className="bg-white border-2 border-slate-900 shadow-xl print:border-slate-300 print:shadow-none overflow-hidden rounded-3xl">
-          {/* Header */}
           <div className="p-6 bg-slate-900 text-white flex justify-between items-center print:bg-slate-100 print:text-black">
             <div>
               <h3 className="text-xl font-black uppercase italic tracking-tighter">IRS Form 1040 (Schedule C)</h3>
@@ -85,13 +94,11 @@ export default function TaxFormWorksheet() {
             </div>
           </div>
 
-          {/* Net Profit Bar */}
           <div className="p-6 bg-emerald-50 border-b border-slate-200 flex justify-between items-center print:bg-white">
             <span className="font-black text-slate-900 uppercase text-[10px] tracking-widest">Line 31: Net Profit / Loss</span>
             <span className="text-3xl font-black text-emerald-600 print:text-black">${netProfit.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
           </div>
 
-          {/* Table Container - ကျစ်ကျစ်လစ်လစ် ဖြစ်စေရန် Table သုံးပါမယ် */}
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100 print:bg-slate-50">
@@ -120,7 +127,35 @@ export default function TaxFormWorksheet() {
             </tbody>
           </table>
 
-          {/* Footer */}
+          {/* Paid Preparer Section */}
+          <div className="mt-10 border-t-2 border-slate-900 p-8 bg-slate-50 print:bg-white">
+            <h4 className="text-[10px] font-black uppercase tracking-widest mb-6 border-b border-slate-200 pb-2">
+                Paid Preparer Use Only
+            </h4>
+            <div className="grid grid-cols-2 gap-12 text-[10px]">
+                <div className="space-y-6">
+                    <div className="border-b border-slate-300 pb-1">
+                        <p className="text-slate-400 font-bold uppercase mb-1">Preparer's Name</p>
+                        <p className="font-black text-slate-900 text-xs">{profile?.preparerName || '____________________'}</p>
+                    </div>
+                    <div className="border-b border-slate-300 pb-1">
+                        <p className="text-slate-400 font-bold uppercase mb-1">PTIN / EIN</p>
+                        <p className="font-black text-slate-900 text-xs">{profile?.ptin || '____________________'}</p>
+                    </div>
+                </div>
+                <div className="space-y-6">
+                    <div className="border-b border-slate-300 pb-4">
+                        <p className="text-slate-400 font-bold uppercase mb-1">Preparer's Signature</p>
+                        <p className="text-slate-300 italic font-serif">Sign Here ____________________</p>
+                    </div>
+                    <div className="border-b border-slate-300 pb-1">
+                        <p className="text-slate-400 font-bold uppercase mb-1">Date</p>
+                        <p className="font-black text-slate-900 text-xs">{new Date().toLocaleDateString()}</p>
+                    </div>
+                </div>
+            </div>
+          </div>
+
           <div className="p-6 bg-slate-50 text-slate-400 text-[9px] font-bold text-center leading-normal border-t border-slate-200 print:bg-white">
             <p>Disclaimer: This is a system-generated tax worksheet for information purposes only. <br/> Use these figures to complete your IRS Form 1040 Schedule C.</p>
           </div>

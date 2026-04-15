@@ -10,6 +10,8 @@ export default function Settings() {
   const [businessName, setBusinessName] = useState('');
   const [address, setAddress] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [preparerName, setPreparerName] = useState('');
+  const [ptin, setPtin] = useState(''); // Preparer ID ရှိရင်
 
   useEffect(() => {
     onAuthStateChanged(auth, async (user) => {
@@ -30,6 +32,8 @@ export default function Settings() {
     await setDoc(doc(db, "profiles", auth.currentUser.uid), {
       businessName,
       address,
+      preparerName, // အသစ်
+      ptin, // အသစ်
       uid: auth.currentUser.uid
     });
     setIsSaving(false);

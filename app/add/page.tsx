@@ -182,6 +182,16 @@ export default function AddTransaction() {
                           <option key={c.value} value={c.value}>{c.label}</option>
                       ))}
                   </select>
+                  {category && (
+                    <div className="mt-4 p-5 bg-emerald-50 border-l-8 border-emerald-400 rounded-2xl animate-in fade-in slide-in-from-top-2">
+                      <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest italic mb-2">
+                        Tax Prep: {TAX_CATEGORIES.find(c => c.value === category)?.line}
+                      </p>
+                      <p className="text-xs font-bold text-slate-600 leading-relaxed">
+                        {TAX_CATEGORIES.find(c => c.value === category)?.info}
+                      </p>
+                    </div>
+                  )}
               </div>
 
               {/* Paid From Section */}

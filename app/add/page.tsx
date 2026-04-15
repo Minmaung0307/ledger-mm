@@ -8,6 +8,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore'; 
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Camera, Loader2, Calendar as CalendarIcon, Landmark, CheckCircle2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 interface Account {
   id: string;
@@ -17,6 +18,7 @@ interface Account {
 }
 
 export default function AddTransaction() {
+  const router = useRouter();
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('other');
@@ -108,7 +110,9 @@ export default function AddTransaction() {
         uid: user.uid,
         verified: false
       });
-      window.location.href = "/";
+      // window.location.href = "/";
+      router.push("/");
+      router.refresh();
     } catch (error: any) {
       console.error(error);
       alert("Error: " + error.message);
@@ -166,7 +170,9 @@ export default function AddTransaction() {
                 </div>
                 {/* Transaction Date Picker */}
                 <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-2">Date of Purchase</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-2 flex items-center gap-2">
+                        <CalendarIcon size={14} className="text-emerald-500" /> Date of Purchase
+                    </label>
                     <input type="date" value={transDate} onChange={e => setTransDate(e.target.value)} className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-900 focus:border-emerald-500 outline-none" required />
                 </div>
             </div>
@@ -188,7 +194,9 @@ export default function AddTransaction() {
 
                 {/* Paid From Section */}
                 <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-4">Paid From (Account)</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-4 flex items-center gap-2">
+                        <Landmark size={14} className="text-emerald-500" /> Paid From (Account)
+                    </label>
                     <select 
                         value={bankAccount} 
                         onChange={e => setBankAccount(e.target.value)} 

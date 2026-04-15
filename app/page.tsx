@@ -56,13 +56,12 @@ export default function Dashboard() {
 
           const data = snapshot.docs.map(doc => {
             const item = doc.data();
-            // serverTimestamp ပြန်မကျလာသေးခင် error မတက်အောင် စစ်တာပါ
-            const safeDate = item.transactionDate?.toDate?.() || item.date?.toDate?.() || new Date();
             
             return {
               id: doc.id,
               ...item,
-              displayDate: safeDate // အောက်မှာ သုံးဖို့ သီးသန့် Date တစ်ခု ထုတ်ထားမယ်
+              // payload error ကာကွယ်ရန် Safe Date ယူခြင်း
+              displayDate: item.transactionDate?.toDate?.() || item.date?.toDate?.() || new Date()
             };
           });
 

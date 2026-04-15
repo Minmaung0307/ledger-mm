@@ -28,16 +28,27 @@ export default function TransactionsList() {
         );
 
         const unsubscribeData = onSnapshot(q, (snapshot) => {
-          // snapshot ရှိ၊ မရှိ သေချာစစ်မယ် (ဒါဆိုရင် payload error မတက်တော့ပါဘူး)
-          if (!snapshot) return; 
-          
-          setTransactions(snapshot.docs.map(doc => ({ 
-            id: doc.id, 
-            ...doc.data() 
-          })));
+          // ၁။ Snapshot တကယ်ရှိမရှိ အရင်စစ်ပါ
+          if (!snapshot || snapshot.metadata.hasPendingWrites) {
+            // ပိုက်ဆံစာရင်း အသစ်သွင်းနေတုန်း (Local cache အဆင့်) မှာ ခဏစောင့်ခိုင်းတာပါ
+            // ဒါဆိုရင် payload error မတက်တော့ပါဘူး
+            return; 
+          }
+
+          const items = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return { 
+              id: doc.id, 
+              ...data,
+              // နေ့စွဲဖတ်တဲ့အခါ serverTimestamp မကျလာသေးရင် လက်ရှိအချိန်ကို ခေတ္တသုံးမယ်
+              displayDate: data.transactionDate?.toDate?.() || data.date?.toDate?.() || new Date()
+            };
+          });
+
+          setTransactions(items);
           setLoading(false);
         }, (error) => {
-          console.error("Snapshot error:", error);
+          console.error("Firestore error:", error);
           setLoading(false);
         });
 

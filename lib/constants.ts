@@ -21,6 +21,8 @@ export const TAX_CATEGORIES = [
   { label: "W-2 Wages (Employee Pay)", value: "w2_wages", type: "expense" },
   { label: "Payroll Taxes (Employer Share)", value: "payroll_taxes", type: "expense" },
   
+  // NON-DEDUCTIBLE / EQUITY (အခွန်အတွက် ခုနှိမ်၍မရသောစာရင်းများ)
+  { label: "Owner's Draw (Personal Use)", value: "owner_draw", type: "equity" },
   // Tax Payments (Deductible expense မဟုတ်ဘဲ အစိုးရကို ကြိုပေးထားတာဖြစ်လို့ type ကို 'payment' လို့ ထားပါမယ်)
   { label: "Quarterly Estimated Tax Paid", value: "estimated_tax_paid", type: "payment" }, // <--- Estimated Tax
   

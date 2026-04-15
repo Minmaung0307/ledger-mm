@@ -19,24 +19,44 @@ export default function TransactionsList() {
   const [dismissedAlerts, setDismissedAlerts] = useState<string[]>([]);
 
   useEffect(() => {
-      const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
-        if (user) {
-          const q = query(collection(db, "transactions"), where("uid", "==", user.uid), orderBy("date", "desc"));
-          const unsubscribeData = onSnapshot(q, (snapshot) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const q = query(
+          collection(db, "transactions"), 
+          where("uid", "==", user.uid), 
+          orderBy("date", "desc")
+        );
+
+        const unsubscribeData = onSnapshot(q, (snapshot) => {
+          // null check ထည့်ခြင်းဖြင့် payload error ကို ကာကွယ်ပါမယ်
+          if (snapshot) {
             setTransactions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-            setLoading(false);
-          });
+          }
+          setLoading(false);
+        }, (error) => {
+          console.error("Snapshot error:", error);
+          setLoading(false);
+        });
 
-          try {
-            const qAcc = query(collection(db, "chart_of_accounts"), where("uid", "==", user.uid));
-            const accSnap = await getDocs(qAcc);
+        // Chart of Accounts ဆွဲယူခြင်း
+        try {
+          const qAcc = query(collection(db, "chart_of_accounts"), where("uid", "==", user.uid));
+          const accSnap = await getDocs(qAcc);
+          if (accSnap) {
             setAccounts(accSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any)));
-          } catch (err) { console.error(err); }
+          }
+        } catch (err) { 
+          console.error("Accounts fetch error:", err); 
+        }
 
-          return () => unsubscribeData();
-        } else { setLoading(false); }
-      });
-      return () => unsubscribeAuth();
+        return () => unsubscribeData();
+      } else {
+        setTransactions([]);
+        setLoading(false);
+      }
+    });
+
+    return () => unsubscribeAuth();
   }, []);
 
   const isPotentialDuplicate = (item: any) => {

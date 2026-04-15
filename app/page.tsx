@@ -41,7 +41,8 @@ export default function Dashboard() {
   const remainingTax = taxLiability - stats.estimatedPaid; // ဆောင်ရန်ကျန်ငွေ
 
   useEffect(() => {
-    setIsMounted(true);
+    setIsMounted(true); // Component Mounted ဖြစ်ပြီဆိုတာ မှတ်မယ်
+
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       if (user) {
         const q = query(
@@ -51,28 +52,31 @@ export default function Dashboard() {
         );
 
         const unsubscribeData = onSnapshot(q, (snapshot) => {
+          // payload error ကာကွယ်ရန် snapshot ရှိ၊ မရှိ အရင်စစ်ပါ
+          if (snapshot.empty) {
+            setTransactions([]);
+            setStats({ income: 0, expenses: 0, estimatedPaid: 0 });
+            setChartData([]);
+            setLoading(false);
+            return;
+          }
+
           const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
           setTransactions(data);
 
-          let totalInc = 0; 
-          let totalExp = 0;
-          let totalEstPaid = 0;
-          let curMonthInc = 0;
-          let curMonthExp = 0;
+          let totalInc = 0, totalExp = 0, totalEstPaid = 0;
+          let curMonthInc = 0, curMonthExp = 0;
           const monthlyDataMap: any = {};
           const now = new Date();
 
           data.forEach((item: any) => {
-            const date = item.date?.toDate() || new Date();
+            // item.date ရှိမှ toDate() ခေါ်ပါ (Payload error ကာကွယ်ရန်)
+            const date = item.transactionDate?.toDate() || item.date?.toDate() || new Date();
             const monthLabel = date.toLocaleString('default', { month: 'short' });
             
-            if (item.category === 'income') {
-              totalInc += item.amount;
-            } else if (item.category === 'estimated_tax_paid') {
-              totalEstPaid += item.amount;
-            } else {
-              totalExp += item.amount;
-            }
+            if (item.category === 'income') totalInc += item.amount;
+            else if (item.category === 'estimated_tax_paid') totalEstPaid += item.amount;
+            else totalExp += item.amount;
 
             if (!monthlyDataMap[monthLabel]) {
               monthlyDataMap[monthLabel] = { month: monthLabel, income: 0, expense: 0 };
@@ -90,10 +94,17 @@ export default function Dashboard() {
           setMonthlyStats({ inc: curMonthInc, exp: curMonthExp });
           setChartData(Object.values(monthlyDataMap).reverse().slice(-6)); 
           setLoading(false);
+        }, (error) => {
+          console.error("Firestore error:", error);
+          setLoading(false);
         });
+
         return () => unsubscribeData();
+      } else {
+        setLoading(false);
       }
     });
+
     return () => unsubscribeAuth();
   }, []);
 
@@ -221,7 +232,7 @@ export default function Dashboard() {
       {/* Chart Section */}
       <div className="bg-white p-8 md:p-12 rounded-[3.5rem] shadow-2xl border-2 border-slate-50 mb-14 overflow-hidden">
         <h3 className="font-black text-slate-900 uppercase text-xs tracking-widest mb-10 text-center italic tracking-[0.3em]">Monthly Performance Flow</h3>
-        <div className="h-[350px] w-full min-h-[350px]"> 
+        <div className="h-[300px] w-full min-h-[300px]"> 
           {isMounted && chartData.length > 0 && (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>

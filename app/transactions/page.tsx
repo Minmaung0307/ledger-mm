@@ -16,6 +16,7 @@ export default function TransactionsList() {
   const [loading, setLoading] = useState(true);
   const [showOnlyReceipts, setShowOnlyReceipts] = useState(false);
   const [editItem, setEditItem] = useState<any>(null);
+  const [dismissedAlerts, setDismissedAlerts] = useState<string[]>([]);
 
   useEffect(() => {
       const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
@@ -39,10 +40,15 @@ export default function TransactionsList() {
   }, []);
 
   const isPotentialDuplicate = (item: any) => {
-    const itemDate = item.date?.toDate().toLocaleDateString();
+    // Dismiss လုပ်ထားတဲ့စာရင်းထဲမှာ ပါနေရင် warning မပြတော့ဘူး
+    if (dismissedAlerts.includes(item.id)) return false; 
+
+    const itemDate = item.transactionDate?.toDate().toLocaleDateString() || item.date?.toDate().toLocaleDateString();
     return transactions.some(other => 
-      other.id !== item.id && other.description === item.description && 
-      other.amount === item.amount && other.date?.toDate().toLocaleDateString() === itemDate
+      other.id !== item.id && 
+      other.description === item.description && 
+      other.amount === item.amount &&
+      (other.transactionDate?.toDate().toLocaleDateString() || other.date?.toDate().toLocaleDateString()) === itemDate
     );
   };
 
@@ -121,7 +127,18 @@ export default function TransactionsList() {
                 const isIncome = item.category === 'income';
                 return (
                   <div key={item.id} className={`p-4 md:px-8 md:py-4 flex justify-between items-center hover:bg-slate-50/50 transition border-b last:border-0 border-slate-50 group relative ${hasDuplicate ? 'bg-amber-50/30' : ''}`}>
-                    {hasDuplicate && <div className="absolute top-1 left-1/2 -translate-x-1/2 bg-amber-100 text-amber-700 px-3 py-0.5 rounded-full font-black text-[8px] flex items-center gap-1 border border-amber-200 shadow-sm z-10 animate-pulse"><AlertTriangle size={10} /> POSSIBLE DUPLICATE</div>}
+                    {hasDuplicate && (
+                      <div className="absolute top-1 left-1/2 -translate-x-1/2 bg-white border border-amber-200 text-amber-600 px-3 py-1 rounded-full font-black text-[8px] flex items-center gap-2 shadow-sm z-10 animate-pulse">
+                        <AlertTriangle size={10} /> POSSIBLE DUPLICATE
+                        {/* Warning ကို ဖျောက်ဖို့ ခလုတ်လေးပါ */}
+                        <button 
+                          onClick={() => setDismissedAlerts([...dismissedAlerts, item.id])} 
+                          className="hover:text-slate-900 ml-1 border-l pl-2 border-amber-200 uppercase"
+                        >
+                          Dismiss
+                        </button>
+                      </div>
+                    )}
                     <div className="flex-1">
                       <div className="flex items-center gap-4">
                         <button onClick={() => toggleVerify(item.id, item.verified)} className={`p-2 rounded-xl transition-all active:scale-90 ${item.verified ? 'bg-emerald-100 text-emerald-600 shadow-inner' : 'bg-slate-50 text-slate-200 hover:text-slate-400'}`}><CheckCircle2 size={22} /></button>
@@ -137,7 +154,7 @@ export default function TransactionsList() {
                       </div>
                     </div>
                     <div className="flex items-center gap-4 md:gap-8">
-                      <p className={`text-2xl md:text-3xl font-black tracking-tighter ${isIncome ? 'text-emerald-600' : 'text-rose-600'}`}>{isIncome ? '+' : '-'}${Number(item.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+                      <p className={`text-lg md:text-xl font-black tracking-tighter ${isIncome ? 'text-emerald-600' : 'text-rose-600'}`}>{isIncome ? '+' : '-'}${Number(item.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
                       <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button onClick={() => {
                             const dateObj = item.transactionDate?.toDate() || item.date?.toDate() || new Date();

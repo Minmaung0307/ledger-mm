@@ -5,9 +5,9 @@ import Layout from '@/components/Layout';
 import { TAX_CATEGORIES } from '@/lib/constants';
 import { db, auth, storage } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore'; // getDocs, query, where ထပ်တိုးထားပါတယ်
+import { collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore'; 
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { Camera, Loader2, Calendar as CalendarIcon, Landmark } from 'lucide-react';
+import { Camera, Loader2, Calendar as CalendarIcon, Landmark, CheckCircle2 } from 'lucide-react';
 
 interface Account {
   id: string;
@@ -20,12 +20,9 @@ export default function AddTransaction() {
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('other');
-  
-  // --- New States ---
-  const [bankAccount, setBankAccount] = useState(''); // Paid From
-  const [transDate, setTransDate] = useState(new Date().toISOString().split('T')[0]); // Transaction Date (Default Today)
-  const [accounts, setAccounts] = useState<Account[]>([]); // ဘဏ်အကောင့်စာရင်း
-  
+  const [bankAccount, setBankAccount] = useState(''); 
+  const [transDate, setTransDate] = useState(new Date().toISOString().split('T')[0]); 
+  const [accounts, setAccounts] = useState<Account[]>([]); 
   const [preview, setPreview] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [user, setUser] = useState<any>(null);
@@ -37,20 +34,9 @@ export default function AddTransaction() {
         try {
           const q = query(collection(db, "chart_of_accounts"), where("uid", "==", u.uid));
           const snap = await getDocs(q);
-          
-          const accs = snap.docs.map(doc => ({ 
-              id: doc.id, 
-              ...doc.data() 
-          } as Account));
-
-          // ၁။ ရလာတဲ့ အကောင့်တွေကို State ထဲ ထည့်မယ် (ဒါဆိုရင် accs က အရောင်တောက်လာပါပြီ)
+          const accs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Account));
           setAccounts(accs);
-
-          // ၂။ အကောင့်ရှိလျှင် ပထမဆုံးတစ်ခုကို Default အနေနဲ့ Dropdown မှာ ရွေးထားမယ်
-          if (accs.length > 0) {
-            setBankAccount(accs[0].name);
-          }
-          
+          if (accs.length > 0) setBankAccount(accs[0].name);
         } catch (err) {
           console.error("Error fetching accounts:", err);
         }
@@ -116,9 +102,9 @@ export default function AddTransaction() {
         amount: parseFloat(amount),
         category,
         receiptUrl,
-        bankAccount, // သိမ်းမည့် ဘဏ်အကောင့်
-        transactionDate: new Date(transDate), // အမှန်တကယ်သုံးစွဲသည့်နေ့
-        date: serverTimestamp(), // စာရင်းသွင်းသည့်နေ့ (System Record)
+        bankAccount,
+        transactionDate: new Date(transDate),
+        date: serverTimestamp(),
         uid: user.uid,
         verified: false
       });
@@ -132,92 +118,111 @@ export default function AddTransaction() {
 
   return (
     <Layout>
-      <div className="max-w-xl mx-auto pt-6 px-4 pb-40">
-        <h2 className="text-3xl font-black mb-8 text-slate-900 tracking-tighter uppercase italic">Add Record</h2>
+      {/* Container ကို max-w-6xl သို့ တိုးချဲ့လိုက်ပါသည် */}
+      <div className="max-w-6xl mx-auto pt-6 px-4 pb-40">
+        <h2 className="text-3xl font-black mb-8 text-slate-900 tracking-tighter uppercase italic lg:text-left text-center">
+            Add Record
+        </h2>
         
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Photo Area */}
-          <label className="relative h-64 border-4 border-dashed border-slate-200 rounded-[3rem] bg-white overflow-hidden flex flex-col items-center justify-center cursor-pointer hover:border-emerald-400 transition-all shadow-sm">
-            {preview ? (
-                <img src={preview} className="absolute inset-0 w-full h-full object-cover opacity-60" alt="p" />
-            ) : (
-                <div className="flex flex-col items-center">
-                    <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 mb-3 shadow-inner"><Camera size={32} /></div>
-                    <p className="font-black text-slate-400 uppercase text-xs tracking-widest">Snap Receipt Photo</p>
-                </div>
+        {/* Desktop တွင် ၂-ကော်လံ၊ Mobile တွင် ၁-ကော်လံ ဖြစ်စေရန် grid သုံးပါသည် */}
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+          
+          {/* ဘယ်ဘက်ခြမ်း: Photo Upload Area */}
+          <div className="space-y-4">
+            <label className="relative h-64 lg:h-[540px] border-4 border-dashed border-slate-200 rounded-[3rem] bg-white overflow-hidden flex flex-col items-center justify-center cursor-pointer hover:border-emerald-400 transition-all shadow-sm group">
+                {preview ? (
+                    <img src={preview} className="absolute inset-0 w-full h-full object-cover opacity-60" alt="receipt preview" />
+                ) : (
+                    <div className="flex flex-col items-center">
+                        <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 mb-3 shadow-inner group-hover:bg-emerald-50 group-hover:text-emerald-500 transition-colors">
+                            <Camera size={32} />
+                        </div>
+                        <p className="font-black text-slate-400 uppercase text-xs tracking-widest">Snap Receipt Photo</p>
+                    </div>
+                )}
+                <input type="file" accept="image/*" capture="environment" onChange={handleFileChange} className="hidden" />
+            </label>
+            {preview && (
+                 <p className="text-center text-[10px] font-black text-emerald-600 uppercase tracking-widest flex items-center justify-center gap-2">
+                    <CheckCircle2 size={14}/> Image Loaded & Compressed
+                 </p>
             )}
-            <input type="file" accept="image/*" capture="environment" onChange={handleFileChange} className="hidden" />
-          </label>
+          </div>
 
-          <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl border border-slate-50 space-y-6">
+          {/* ညာဘက်ခြမ်း: Data Input Fields Area */}
+          <div className="bg-white p-8 lg:p-10 rounded-[2.5rem] shadow-2xl border border-slate-50 space-y-6">
+            
             {/* Merchant Name */}
             <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Merchant Name / Description</label>
-                <input type="text" value={description} onChange={e => setDescription(e.target.value)} placeholder="e.g. Costco, Shell Gas" className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-900 focus:border-emerald-500 outline-none transition-all" required />
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-2">Merchant Name / Description</label>
+                <input type="text" value={description} onChange={e => setDescription(e.target.value)} placeholder="e.g. Costco, Shell Gas" className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-900 focus:border-emerald-500 outline-none transition-all text-lg" required />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Amount */}
                 <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Amount ($)</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-2">Amount ($)</label>
                     <input type="number" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-2xl text-slate-900 focus:border-emerald-500 outline-none" required />
                 </div>
                 {/* Transaction Date Picker */}
                 <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Date of Purchase</label>
-                    <input type="date" value={transDate} onChange={e => setTransDate(e.target.value)} className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-900 focus:border-emerald-500 outline-none appearance-none" required />
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-2">Date of Purchase</label>
+                    <input type="date" value={transDate} onChange={e => setTransDate(e.target.value)} className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-900 focus:border-emerald-500 outline-none" required />
                 </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Category Section */}
-              <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-4">Category</label>
-                  <select 
-                      value={category} 
-                      onChange={e => setCategory(e.target.value)} 
-                      className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-900 focus:border-emerald-500 outline-none appearance-none transition-all"
-                  >
-                      {TAX_CATEGORIES.map(c => (
-                          <option key={c.value} value={c.value}>{c.label}</option>
-                      ))}
-                  </select>
-                  {category && (
-                    <div className="mt-4 p-5 bg-emerald-50 border-l-8 border-emerald-400 rounded-2xl animate-in fade-in slide-in-from-top-2">
-                      <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest italic mb-2">
-                        Tax Prep: {TAX_CATEGORIES.find(c => c.value === category)?.line}
-                      </p>
-                      <p className="text-xs font-bold text-slate-600 leading-relaxed">
-                        {TAX_CATEGORIES.find(c => c.value === category)?.info}
-                      </p>
-                    </div>
-                  )}
-              </div>
+                {/* Category Section */}
+                <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-4">Category</label>
+                    <select 
+                        value={category} 
+                        onChange={e => setCategory(e.target.value)} 
+                        className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-900 focus:border-emerald-500 outline-none appearance-none transition-all"
+                    >
+                        {TAX_CATEGORIES.map(c => (
+                            <option key={c.value} value={c.value}>{c.label}</option>
+                        ))}
+                    </select>
+                </div>
 
-              {/* Paid From Section */}
-              <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-4">Paid From (Account)</label>
-                  <select 
-                      value={bankAccount} 
-                      onChange={e => setBankAccount(e.target.value)} 
-                      className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-900 focus:border-emerald-500 outline-none appearance-none transition-all"
-                  >
-                      {accounts.length > 0 ? (
-                          accounts.map(acc => <option key={acc.id} value={acc.name}>{acc.name}</option>)
-                      ) : (
-                          <option value="">No Accounts Found</option>
-                      )}
-                      <option value="Cash/Other">Cash / Other</option>
-                  </select>
-              </div>
-          </div>
+                {/* Paid From Section */}
+                <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-4">Paid From (Account)</label>
+                    <select 
+                        value={bankAccount} 
+                        onChange={e => setBankAccount(e.target.value)} 
+                        className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-900 focus:border-emerald-500 outline-none appearance-none transition-all"
+                    >
+                        {accounts.length > 0 ? (
+                            accounts.map(acc => <option key={acc.id} value={acc.name}>{acc.name}</option>)
+                        ) : (
+                            <option value="">No Accounts Found</option>
+                        )}
+                        <option value="Cash/Other">Cash / Other</option>
+                    </select>
+                </div>
+            </div>
 
-            <button type="submit" disabled={isSaving} className="w-full bg-slate-900 text-white p-5 rounded-2xl font-black uppercase tracking-[0.2em] shadow-xl hover:bg-emerald-600 transition-all active:scale-95 disabled:bg-slate-200">
+            {/* Tax Prep Info Box */}
+            {category && (
+                <div className="p-5 bg-emerald-50 border-l-8 border-emerald-400 rounded-2xl animate-in fade-in slide-in-from-top-2">
+                    <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest italic mb-2">
+                    Tax Prep: {TAX_CATEGORIES.find(c => c.value === category)?.line}
+                    </p>
+                    <p className="text-xs font-bold text-slate-600 leading-relaxed">
+                    {TAX_CATEGORIES.find(c => c.value === category)?.info}
+                    </p>
+                </div>
+            )}
+
+            <button type="submit" disabled={isSaving} className="w-full bg-slate-900 text-white p-6 rounded-2xl font-black uppercase tracking-[0.2em] shadow-xl hover:bg-emerald-600 transition-all active:scale-95 disabled:bg-slate-200">
                 {isSaving ? (
                     <span className="flex items-center justify-center gap-2"><Loader2 className="animate-spin" /> SAVING...</span>
                 ) : "CONFIRM & SAVE RECORD"}
             </button>
           </div>
+          
         </form>
       </div>
     </Layout>

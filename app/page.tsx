@@ -226,8 +226,8 @@ export default function Dashboard() {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#cbd5e1', fontWeight: 'bold', fontSize: 11}} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#cbd5e1', fontSize: 11}} />
+                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#475569', fontWeight: 'bold', fontSize: 11}} />
+                <YAxis axisLine={false} tickLine={false} tick={{fill: '#475569', fontSize: 11}} />
                 <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={{borderRadius: '24px', border: 'none', boxShadow: '0 25px 50px -12px rgb(0 0 0 / 0.15)', fontWeight: 'bold'}} />
                 <Bar dataKey="income" fill="#10b981" radius={[10, 10, 0, 0]} barSize={40} />
                 <Bar dataKey="expense" fill="#f43f5e" radius={[10, 10, 0, 0]} barSize={40} />

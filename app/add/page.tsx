@@ -170,26 +170,37 @@ export default function AddTransaction() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Category */}
-                <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Category</label>
-                    <select value={category} onChange={e => setCategory(e.target.value)} className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold appearance-none outline-none focus:border-emerald-500">
-                        {TAX_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                    </select>
-                </div>
-                {/* Bank Account Selector */}
-                <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Paid From (Account)</label>
-                    <select value={bankAccount} onChange={e => setBankAccount(e.target.value)} className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold appearance-none outline-none focus:border-emerald-500">
-                        {accounts.length > 0 ? (
-                            accounts.map(acc => <option key={acc.id} value={acc.name}>{acc.name}</option>)
-                        ) : (
-                            <option value="">No Accounts Found</option>
-                        )}
-                        <option value="Cash/Other">Cash / Other</option>
-                    </select>
-                </div>
-            </div>
+              {/* Category Section */}
+              <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-4">Category</label>
+                  <select 
+                      value={category} 
+                      onChange={e => setCategory(e.target.value)} 
+                      className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-900 focus:border-emerald-500 outline-none appearance-none transition-all"
+                  >
+                      {TAX_CATEGORIES.map(c => (
+                          <option key={c.value} value={c.value}>{c.label}</option>
+                      ))}
+                  </select>
+              </div>
+
+              {/* Paid From Section */}
+              <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-4">Paid From (Account)</label>
+                  <select 
+                      value={bankAccount} 
+                      onChange={e => setBankAccount(e.target.value)} 
+                      className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-900 focus:border-emerald-500 outline-none appearance-none transition-all"
+                  >
+                      {accounts.length > 0 ? (
+                          accounts.map(acc => <option key={acc.id} value={acc.name}>{acc.name}</option>)
+                      ) : (
+                          <option value="">No Accounts Found</option>
+                      )}
+                      <option value="Cash/Other">Cash / Other</option>
+                  </select>
+              </div>
+          </div>
 
             <button type="submit" disabled={isSaving} className="w-full bg-slate-900 text-white p-5 rounded-2xl font-black uppercase tracking-[0.2em] shadow-xl hover:bg-emerald-600 transition-all active:scale-95 disabled:bg-slate-200">
                 {isSaving ? (

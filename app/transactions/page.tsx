@@ -198,13 +198,30 @@ export default function TransactionsList() {
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <select value={editItem.category} onChange={e => setEditItem({...editItem, category: e.target.value})} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold appearance-none outline-none">
-                    {TAX_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                </select>
-                <select value={editItem.bankAccount || "Cash/Other"} onChange={e => setEditItem({...editItem, bankAccount: e.target.value})} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold appearance-none outline-none">
-                    {accounts.map(acc => <option key={acc.id} value={acc.name}>{acc.name}</option>)}
-                    <option value="Cash/Other">Cash / Other</option>
-                </select>
+                {/* Category Section */}
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Category</label>
+                  <select 
+                    value={editItem.category} 
+                    onChange={e => setEditItem({...editItem, category: e.target.value})} 
+                    className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-900 focus:border-emerald-500 outline-none appearance-none transition-all"
+                  >
+                      {TAX_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                  </select>
+                </div>
+
+                {/* Paid From Section */}
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Paid From</label>
+                  <select 
+                    value={editItem.bankAccount || "Cash/Other"} 
+                    onChange={e => setEditItem({...editItem, bankAccount: e.target.value})} 
+                    className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-900 focus:border-emerald-500 outline-none appearance-none transition-all"
+                  >
+                      {accounts.map(acc => <option key={acc.id} value={acc.name}>{acc.name}</option>)}
+                      <option value="Cash/Other">Cash / Other</option>
+                  </select>
+                </div>
               </div>
 
               <button type="submit" className="w-full bg-slate-900 text-white p-5 rounded-2xl font-black uppercase tracking-widest hover:bg-emerald-600 transition shadow-xl active:scale-95">Save Changes</button>

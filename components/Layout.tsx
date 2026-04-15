@@ -171,7 +171,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               onClick={logout} 
               className="flex items-center gap-4 p-4 w-full text-rose-500 font-black hover:bg-rose-50 rounded-2xl transition-all active:scale-95 group"
           >
-              <LogOut size={20} className="group-hover:-translate-x-1 transition-transform" /> Logout Session
+              <LogOut size={20} className="group-hover:-translate-x-1 transition-transform" /> Logout
           </button>
       </div>
       </aside>

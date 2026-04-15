@@ -18,8 +18,11 @@ interface Account {
 }
 
 export default function AddTransaction() {
-  const router = useRouter();
   const [description, setDescription] = useState('');
+  const [suggestions, setSuggestions] = useState<string[]>([]); // နာမည်ဟောင်းများစာရင်း
+  const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([]); // စစ်ထုတ်ထားသောစာရင်း
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const router = useRouter();
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('other');
   const [bankAccount, setBankAccount] = useState(''); 
@@ -39,9 +42,15 @@ export default function AddTransaction() {
           const accs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Account));
           setAccounts(accs);
           if (accs.length > 0) setBankAccount(accs[0].name);
+
         } catch (err) {
           console.error("Error fetching accounts:", err);
         }
+        const transQuery = query(collection(db, "transactions"), where("uid", "==", u.uid));
+        const transSnap = await getDocs(transQuery);
+        const names = transSnap.docs.map(doc => doc.data().description);
+        const uniqueNames = Array.from(new Set(names)) as string[]; // နာမည်ထပ်တာတွေ ဖယ်မယ်
+        setSuggestions(uniqueNames);
       }
     });
     return () => unsubscribe();
@@ -82,6 +91,19 @@ export default function AddTransaction() {
     if (!selectedFile) return;
     const compressedData = await compressImage(selectedFile);
     setPreview(compressedData);
+  };
+
+  const handleDescriptionChange = (val: string) => {
+    setDescription(val);
+    if (val.length > 1) {
+        const filtered = suggestions.filter(name => 
+            name.toLowerCase().includes(val.toLowerCase())
+        );
+        setFilteredSuggestions(filtered);
+        setShowSuggestions(true);
+    } else {
+        setShowSuggestions(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -157,10 +179,39 @@ export default function AddTransaction() {
           <div className="bg-white p-8 lg:p-10 rounded-[2.5rem] shadow-2xl border border-slate-50 space-y-6">
             
             {/* Merchant Name */}
-            <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-2">Merchant Name / Description</label>
-                <input type="text" value={description} onChange={e => setDescription(e.target.value)} placeholder="e.g. Costco, Shell Gas" className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-900 focus:border-emerald-500 outline-none transition-all text-lg" required />
-            </div>
+            <div className="relative">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-2">Merchant Name / Description</label>
+                <input 
+                    type="text" 
+                    value={description} 
+                    onChange={e => handleDescriptionChange(e.target.value)} 
+                    onFocus={() => description.length > 1 && setShowSuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)} // နှိပ်လို့ရအောင် ခဏစောင့်မှပိတ်မယ်
+                    placeholder="e.g. Costco, Amazon" 
+                    className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-900 focus:border-emerald-500 focus:bg-white outline-none transition-all text-lg" 
+                    required 
+                  />
+
+                  {/* Suggestions List Dropdown */}
+                  {showSuggestions && filteredSuggestions.length > 0 && (
+                      <div className="absolute z-50 w-full mt-2 bg-white border-2 border-slate-100 rounded-3xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2">
+                          {filteredSuggestions.slice(0, 5).map((name, index) => (
+                              <button
+                                  key={index}
+                                  type="button"
+                                  onClick={() => {
+                                      setDescription(name);
+                                      setShowSuggestions(false);
+                                  }}
+                                  className="w-full text-left p-4 hover:bg-emerald-50 font-bold text-slate-700 border-b last:border-0 border-slate-50 transition-colors flex items-center gap-3"
+                              >
+                                  <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                                  {name}
+                              </button>
+                          ))}
+                      </div>
+                  )}
+                </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Amount */}

@@ -15,6 +15,7 @@ export const TAX_CATEGORIES = [
   { label: "Meals (50% Deductible)", value: "meals", type: "expense" },
   { label: "Office Expense", value: "office", type: "expense" },
   { label: "Rent or Lease", value: "rent", type: "expense" },
+  { label: "Hardware & Equipment", value: "hardware", type: "expense" },
   { label: "Software & Subscriptions", value: "software", type: "expense" },
   { label: "Travel", value: "travel", type: "expense" },
   { label: "Utilities (Internet/Phone)", value: "utilities", type: "expense" },

@@ -53,7 +53,7 @@ export default function Dashboard() {
 
         const unsubscribeData = onSnapshot(q, (snapshot) => {
           // payload error ကာကွယ်ရန် snapshot ရှိ၊ မရှိ အရင်စစ်ပါ
-          if (snapshot.empty) {
+          if (!snapshot || snapshot.empty) {
             setTransactions([]);
             setStats({ income: 0, expenses: 0, estimatedPaid: 0 });
             setChartData([]);

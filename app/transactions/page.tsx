@@ -28,10 +28,13 @@ export default function TransactionsList() {
         );
 
         const unsubscribeData = onSnapshot(q, (snapshot) => {
-          // null check ထည့်ခြင်းဖြင့် payload error ကို ကာကွယ်ပါမယ်
-          if (snapshot) {
-            setTransactions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-          }
+          // snapshot ရှိ၊ မရှိ သေချာစစ်မယ် (ဒါဆိုရင် payload error မတက်တော့ပါဘူး)
+          if (!snapshot) return; 
+          
+          setTransactions(snapshot.docs.map(doc => ({ 
+            id: doc.id, 
+            ...doc.data() 
+          })));
           setLoading(false);
         }, (error) => {
           console.error("Snapshot error:", error);

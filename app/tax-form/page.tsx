@@ -29,7 +29,10 @@ export default function TaxFormWorksheet() {
         );
         
         onSnapshot(q, (snap) => {
-          setData(snap.docs.map(doc => doc.data()));
+          if (snap) {
+            setData(snap.docs.map(doc => doc.data()));
+          }
+          setLoading(false);
         });
 
         // ၂။ Business Profile (Tax Preparer Info) ဆွဲယူခြင်း

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Layout from '@/components/Layout';
 import { db, auth } from '@/lib/firebase';
 import { onAuthStateChanged } from "firebase/auth";
-import { collection, query, orderBy, onSnapshot, deleteDoc, doc, where, updateDoc } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, deleteDoc, doc, where, updateDoc, getDocs } from 'firebase/firestore';
 import { Trash2, Download, Image as ImageIcon, Search, Filter, Edit3, X, CheckCircle2, AlertTriangle } from 'lucide-react'; // AlertTriangle ထည့်လိုက်ပါတယ်
 import { TAX_CATEGORIES } from '@/lib/constants';
 
@@ -14,25 +14,33 @@ export default function TransactionsList() {
   const [loading, setLoading] = useState(true);
   const [showOnlyReceipts, setShowOnlyReceipts] = useState(false);
   const [editItem, setEditItem] = useState<any>(null);
+  const [accounts, setAccounts] = useState<any[]>([]);
 
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        const q = query(
-          collection(db, "transactions"),
-          where("uid", "==", user.uid),
-          orderBy("date", "desc")
-        );
-        const unsubscribeData = onSnapshot(q, (snapshot) => {
-          setTransactions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      const unsubscribeAuth = onAuthStateChanged(auth, async (user) => { // async ထည့်လိုက်ပြီ
+        if (user) {
+          // ၁။ Transactions Query
+          const q = query(collection(db, "transactions"), where("uid", "==", user.uid), orderBy("date", "desc"));
+          const unsubscribeData = onSnapshot(q, (snapshot) => {
+            setTransactions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            setLoading(false);
+          });
+
+          // ၂။ Chart of Accounts Query
+          try {
+            const qAcc = query(collection(db, "chart_of_accounts"), where("uid", "==", user.uid));
+            const accSnap = await getDocs(qAcc); // အခု async ကြောင့် await အလုပ်လုပ်ပါပြီ
+            setAccounts(accSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any)));
+          } catch (err) {
+            console.error(err);
+          }
+
+          return () => unsubscribeData();
+        } else {
           setLoading(false);
-        });
-        return () => unsubscribeData();
-      } else {
-        setLoading(false);
-      }
-    });
-    return () => unsubscribeAuth();
+        }
+      });
+      return () => unsubscribeAuth();
   }, []);
 
   // Duplicate Check Logic (Description, Amount, Date တူရင် သတိပေးမယ်)
@@ -73,7 +81,9 @@ export default function TransactionsList() {
       await updateDoc(docRef, {
         description: editItem.description,
         amount: parseFloat(editItem.amount),
-        category: editItem.category
+        category: editItem.category,
+        bankAccount: editItem.bankAccount || "Other", // ဘဏ်အကောင့်
+        transactionDate: new Date(editItem.tempDate) // နေ့စွဲအသစ်
       });
       setEditItem(null);
       alert("Updated successfully!");
@@ -205,9 +215,18 @@ export default function TransactionsList() {
                         {isIncome ? '+' : '-'}${Number(item.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}
                       </p>
                       <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => setEditItem({id: item.id, ...item})} className="text-slate-300 hover:text-emerald-500 p-2 hover:bg-emerald-50 rounded-xl transition">
-                              <Edit3 size={22} />
-                          </button>
+                          <button onClick={() => {
+    // Firestore Timestamp ကို YYYY-MM-DD format ပြောင်းမယ်
+    const dateObj = item.transactionDate?.toDate() || item.date?.toDate() || new Date();
+    const formattedDate = dateObj.toISOString().split('T')[0];
+    
+    setEditItem({
+        ...item,
+        tempDate: formattedDate // Modal ထဲမှာ သုံးဖို့
+    });
+}} className="text-slate-300 hover:text-emerald-500 p-2 hover:bg-emerald-50 rounded-xl transition">
+    <Edit3 size={22} />
+</button>
                           <button onClick={() => handleDelete(item.id)} className="text-slate-300 hover:text-rose-600 p-2 hover:bg-rose-50 rounded-xl transition">
                               <Trash2 size={22} />
                           </button>
@@ -223,30 +242,54 @@ export default function TransactionsList() {
 
       {/* --- Edit Modal --- */}
       {editItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white p-10 rounded-[2.5rem] w-full max-w-md shadow-2xl relative animate-in zoom-in duration-200">
-            <button onClick={() => setEditItem(null)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 transition-colors"><X size={24} /></button>
-            <h3 className="text-2xl font-black text-slate-900 mb-8 tracking-tight uppercase">Update Transaction</h3>
-            <form onSubmit={handleUpdateTransaction} className="space-y-6">
-              <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Description</label>
-                <input type="text" value={editItem.description} onChange={e => setEditItem({...editItem, description: e.target.value})} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold outline-none focus:border-emerald-500 focus:bg-white transition-all" required />
-              </div>
-              <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Amount ($)</label>
-                <input type="number" step="0.01" value={editItem.amount} onChange={e => setEditItem({...editItem, amount: e.target.value})} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-xl outline-none focus:border-emerald-500 focus:bg-white transition-all" required />
-              </div>
-              <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Category</label>
-                <select value={editItem.category} onChange={e => setEditItem({...editItem, category: e.target.value})} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold outline-none focus:border-emerald-500 focus:bg-white appearance-none transition-all">
-                    {TAX_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                </select>
-              </div>
-              <button type="submit" className="w-full bg-slate-900 text-white p-5 rounded-2xl font-black uppercase tracking-widest hover:bg-emerald-600 transition shadow-xl active:scale-95">Apply Changes</button>
-            </form>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
+      <div className="bg-white p-10 rounded-[2.5rem] w-full max-w-lg shadow-2xl relative animate-in zoom-in duration-200">
+        <button onClick={() => setEditItem(null)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900"><X size={24} /></button>
+        <h3 className="text-2xl font-black text-slate-900 mb-8 tracking-tight uppercase italic">Update Transaction</h3>
+        
+        <form onSubmit={handleUpdateTransaction} className="space-y-5">
+          {/* Description */}
+          <div>
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Description</label>
+            <input type="text" value={editItem.description} onChange={e => setEditItem({...editItem, description: e.target.value})} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold outline-none focus:border-emerald-500" required />
           </div>
-        </div>
-      )}
+
+          <div className="grid grid-cols-2 gap-4">
+            {/* Amount */}
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Amount ($)</label>
+              <input type="number" step="0.01" value={editItem.amount} onChange={e => setEditItem({...editItem, amount: e.target.value})} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-xl outline-none focus:border-emerald-500" required />
+            </div>
+            {/* Transaction Date */}
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Date</label>
+              <input type="date" value={editItem.tempDate} onChange={e => setEditItem({...editItem, tempDate: e.target.value})} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold outline-none focus:border-emerald-500" required />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            {/* Category */}
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Category</label>
+              <select value={editItem.category} onChange={e => setEditItem({...editItem, category: e.target.value})} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold outline-none appearance-none">
+                  {TAX_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+              </select>
+            </div>
+            {/* Bank Account */}
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Paid From</label>
+              <select value={editItem.bankAccount || "Cash/Other"} onChange={e => setEditItem({...editItem, bankAccount: e.target.value})} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold outline-none appearance-none">
+                  {accounts.map(acc => <option key={acc.id} value={acc.name}>{acc.name}</option>)}
+                  <option value="Cash/Other">Cash / Other</option>
+              </select>
+            </div>
+          </div>
+
+          <button type="submit" className="w-full bg-slate-900 text-white p-5 rounded-2xl font-black uppercase tracking-widest hover:bg-emerald-600 transition shadow-xl active:scale-95">Save Changes</button>
+        </form>
+      </div>
+    </div>
+  )}
     </Layout>
   );
 }

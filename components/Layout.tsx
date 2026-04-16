@@ -4,7 +4,8 @@ import React, { useEffect, useState } from 'react';
 import { 
   LayoutDashboard, Receipt, ShoppingCart, 
   Users, Landmark, FileBarChart, Settings, LogOut, 
-  List, ImageIcon, FileText, Menu, X, ChevronRight 
+  List, ImageIcon, FileText, Menu, X, ChevronRight, 
+  ExternalLink
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -69,6 +70,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         { icon: <FileBarChart size={20}/>, label: 'Tax Reports (P&L)', href: '/report' },
         { icon: <List size={20}/>, label: 'Chart of Accounts', href: '/accounts' },
         { icon: <FileText size={20}/>, label: 'Tax Filing Prep', href: '/tax-form' },
+      ]
+    },
+    {
+      group: "Resources",
+      items: [
+        { icon: <ExternalLink size={20}/>, label: 'Quick Links', href: '/links' },
       ]
     }
   ];

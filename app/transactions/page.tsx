@@ -6,7 +6,7 @@ import { db, auth, storage } from '@/lib/firebase'; // storage ထည့်ထ�
 import { onAuthStateChanged } from "firebase/auth";
 import { collection, query, orderBy, onSnapshot, deleteDoc, doc, where, updateDoc, getDocs } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'; // storage function များ
-import { Trash2, Download, Image as ImageIcon, Search, Filter, Edit3, X, CheckCircle2, AlertTriangle, Camera } from 'lucide-react'; 
+import { Trash2, Download, Image as ImageIcon, Search, Filter, Edit3, X, CheckCircle2, AlertTriangle, Camera, Calendar as CalendarIcon, Landmark } from 'lucide-react';
 import { TAX_CATEGORIES } from '@/lib/constants';
 
 export default function TransactionsList() {
@@ -206,23 +206,25 @@ export default function TransactionsList() {
 
       {/* --- Edit Modal --- */}
       {editItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white p-10 rounded-[2.5rem] w-full max-w-lg shadow-2xl relative animate-in zoom-in duration-200 overflow-y-auto max-h-[90vh]">
-            <button onClick={() => setEditItem(null)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 transition-colors"><X size={24} /></button>
-            <h3 className="text-2xl font-black text-slate-900 mb-8 tracking-tight uppercase italic underline decoration-emerald-500 decoration-4">Update Entry</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white p-8 lg:p-10 rounded-[3rem] w-full max-w-2xl shadow-2xl relative animate-in zoom-in duration-200 overflow-y-auto max-h-[95vh] border-t-8 border-emerald-500">
+            <button onClick={() => setEditItem(null)} className="absolute top-8 right-8 text-slate-400 hover:text-slate-900 transition-colors p-2 bg-slate-50 rounded-full"><X size={24} /></button>
+            <h3 className="text-3xl font-black text-slate-900 mb-8 tracking-tighter uppercase italic">Update Entry</h3>
             
             <form onSubmit={handleUpdateTransaction} className="space-y-6">
-              {/* Receipt Image Preview & Update */}
+              {/* Receipt Preview */}
               <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Receipt Evidence</label>
-                <div className="relative h-40 w-full bg-slate-50 rounded-3xl overflow-hidden border-2 border-dashed border-slate-200 flex items-center justify-center group shadow-inner">
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-2 flex items-center gap-2"><Camera size={14} className="text-emerald-500"/> Receipt Evidence</label>
+                <div className="relative h-44 w-full bg-slate-50 rounded-[2.5rem] overflow-hidden border-2 border-dashed border-slate-200 flex items-center justify-center group shadow-inner">
                     {editItem.receiptUrl ? (
                         <>
                             <img src={editItem.receiptUrl} className="absolute inset-0 w-full h-full object-cover opacity-80" alt="r" />
-                            <div className="relative z-10 bg-slate-900/50 p-3 rounded-2xl text-white opacity-0 group-hover:opacity-100 transition-opacity animate-in fade-in"><Camera size={24} /></div>
+                            <div className="relative z-10 bg-slate-900/50 p-4 rounded-2xl text-white opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100">
+                              <Camera size={28} />
+                            </div>
                         </>
                     ) : (
-                        <div className="text-center text-slate-300 font-black"><Camera size={30} className="mx-auto mb-2" /><p className="text-[9px]">NO IMAGE ATTACHED</p></div>
+                        <div className="text-center text-slate-300 font-black"><Camera size={36} className="mx-auto mb-2 opacity-20" /><p className="text-[10px] tracking-widest">TAP TO CHANGE PHOTO</p></div>
                     )}
                     <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => {
                         const file = e.target.files?.[0];
@@ -235,31 +237,32 @@ export default function TransactionsList() {
                 </div>
               </div>
 
-              <input type="text" value={editItem.description} onChange={e => setEditItem({...editItem, description: e.target.value})} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-900 focus:border-emerald-500 outline-none" required />
+              {/* Merchant Name */}
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-2">Description / Shop Name</label>
+                <input type="text" value={editItem.description} onChange={e => setEditItem({...editItem, description: e.target.value})} className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-900 focus:border-emerald-500 focus:bg-white outline-none transition-all text-lg" required />
+              </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Amount */}
                 <div>
-                  <label className="text-[10px] font-black text-slate-400 mb-1 block uppercase">Amount ($)</label>
-                  <input type="number" step="0.01" value={editItem.amount} onChange={e => setEditItem({...editItem, amount: e.target.value})} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-xl text-slate-900 focus:border-emerald-500 outline-none" required />
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-2">Amount ($)</label>
+                  <input type="number" step="0.01" value={editItem.amount} onChange={e => setEditItem({...editItem, amount: e.target.value})} className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-2xl text-slate-900 focus:border-emerald-500 focus:bg-white outline-none transition-all" required />
                 </div>
+                {/* Transaction Date */}
                 <div>
-                  <label className="text-[10px] font-black text-slate-400 mb-1 block uppercase">Date</label>
-                  <input type="date" value={editItem.tempDate} onChange={e => setEditItem({...editItem, tempDate: e.target.value})} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-900 focus:border-emerald-500 outline-none" required />
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-2 flex items-center gap-2"><CalendarIcon size={14} className="text-emerald-500" /> Date of Record</label>
+                  <input type="date" value={editItem.tempDate} onChange={e => setEditItem({...editItem, tempDate: e.target.value})} className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-900 focus:border-emerald-500 focus:bg-white outline-none transition-all" required />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                {/* Category Section */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Category Section with Tax Guidance */}
                 <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Category</label>
-                  <select 
-                    value={editItem.category} 
-                    onChange={e => setEditItem({...editItem, category: e.target.value})} 
-                    className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-900 focus:border-emerald-500 outline-none appearance-none transition-all"
-                  >
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-2">Category</label>
+                  <select value={editItem.category} onChange={e => setEditItem({...editItem, category: e.target.value})} className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-900 focus:border-emerald-500 focus:bg-white outline-none appearance-none transition-all">
                       {TAX_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                   </select>
-
                   {editItem.category && (
                     <div className="mt-4 p-5 bg-emerald-50 border-l-8 border-emerald-400 rounded-2xl animate-in fade-in slide-in-from-top-2">
                       <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest italic mb-2">
@@ -272,21 +275,19 @@ export default function TransactionsList() {
                   )}
                 </div>
 
-                {/* Paid From Section */}
+                {/* Paid From */}
                 <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Paid From</label>
-                  <select 
-                    value={editItem.bankAccount || "Cash/Other"} 
-                    onChange={e => setEditItem({...editItem, bankAccount: e.target.value})} 
-                    className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-900 focus:border-emerald-500 outline-none appearance-none transition-all"
-                  >
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-2 flex items-center gap-2"><Landmark size={14} className="text-emerald-500" /> Paid From (Account)</label>
+                  <select value={editItem.bankAccount || "Cash/Other"} onChange={e => setEditItem({...editItem, bankAccount: e.target.value})} className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-900 focus:border-emerald-500 focus:bg-white outline-none appearance-none transition-all">
                       {accounts.map(acc => <option key={acc.id} value={acc.name}>{acc.name}</option>)}
                       <option value="Cash/Other">Cash / Other</option>
                   </select>
                 </div>
               </div>
 
-              <button type="submit" className="w-full bg-slate-900 text-white p-5 rounded-2xl font-black uppercase tracking-widest hover:bg-emerald-600 transition shadow-xl active:scale-95">Save Changes</button>
+              <button type="submit" className="w-full bg-slate-900 text-white p-6 rounded-2xl font-black uppercase tracking-[0.2em] shadow-xl hover:bg-emerald-600 transition-all active:scale-95 shadow-emerald-100/50">
+                APPLY CHANGES & SAVE
+              </button>
             </form>
           </div>
         </div>

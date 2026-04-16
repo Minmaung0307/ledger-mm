@@ -10,11 +10,18 @@ export const TAX_CATEGORIES = [
 
   // EXPENSES (DEDUCTIBLE)
   { 
-    label: "Raw Materials (Ingredients)", 
-    value: "cogs_purchases", 
+    label: "Produce & Raw Materials (COGS)", 
+    value: "produce_cogs", 
     type: "expense",
     line: "Schedule C - Part III (Line 36)",
-    info: "Inventory Costs: ရောင်းကုန်ထုတ်လုပ်ရန် တိုက်ရိုက်ဝယ်ယူရသော ကုန်ကြမ်းများ (ဥပမာ - Tuna, Foods) ဖြစ်ပါတယ်။ ဒါတွေက အမြတ်ကို တိုက်ရိုက် လျှော့ချပေးပါတယ်။"
+    info: "Inventory Costs: ဆိုင်အတွက်ဝယ်သော ဟင်းသီးဟင်းရွက်နှင့် ကုန်ကြမ်းများ (ဥပမာ - Tuna, Produce) ဖြစ်ပါတယ်။ ဒါတွေက အမြတ်ကို တိုက်ရိုက် လျှော့ချပေးပါတယ်။"
+  },
+  { 
+    label: "Inventory Purchases", 
+    value: "inventory_purchases", 
+    type: "expense",
+    line: "Schedule C - Part III (Line 36)",
+    info: "Bulk Orders: Company များထံမှ ၂ လတစ်ခါ မှာယူရသော Raw, Cooked, Dry ပစ္စည်းများ ဖြစ်ပါတယ်။"
   },
   { 
     label: "Produce (Produce/Supplies)", 

@@ -190,10 +190,22 @@ export default function TransactionsList() {
                     <div className="flex items-center gap-4 md:gap-8">
                       <p className={`text-lg md:text-xl font-black tracking-tighter ${isIncome ? 'text-emerald-600' : 'text-rose-600'}`}>{isIncome ? '+' : '-'}${Number(item.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
                       <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => {
-                            const dateObj = item.transactionDate?.toDate() || item.date?.toDate() || new Date();
-                            setEditItem({ ...item, tempDate: dateObj.toISOString().split('T')[0] });
-                        }} className="text-slate-300 hover:text-emerald-500 p-2"><Edit3 size={22} /></button>
+                        <button 
+                          onClick={() => {
+                            // ၁။ payload error ကာကွယ်ရန် Safe Date logic သုံးမယ်
+                            const dateObj = item.transactionDate?.toDate?.() || item.date?.toDate?.() || new Date();
+                            
+                            // ၂။ editItem ထဲကို Data ထည့်တဲ့အခါ category ကို သေချာ လက်ဆင့်ကမ်းမယ်
+                            setEditItem({ 
+                              ...item, 
+                              category: item.category, // လက်ရှိ category ကို အသေအချာ bind လုပ်လိုက်တာပါ
+                              tempDate: dateObj.toISOString().split('T')[0] 
+                            });
+                          }} 
+                          className="text-slate-300 hover:text-emerald-500 p-2 transition-all active:scale-90"
+                        >
+                          <Edit3 size={22} />
+                        </button>
                         <button onClick={() => handleDelete(item.id)} className="text-slate-300 hover:text-rose-600 p-2"><Trash2 size={22} /></button>
                       </div>
                     </div>

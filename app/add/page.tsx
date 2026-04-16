@@ -5,9 +5,9 @@ import Layout from '@/components/Layout';
 import { TAX_CATEGORIES } from '@/lib/constants';
 import { db, auth, storage } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore'; 
+import { collection, addDoc, serverTimestamp, query, where, getDocs, orderBy } from 'firebase/firestore'; 
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { Camera, Loader2, Calendar as CalendarIcon, Landmark, CheckCircle2 } from 'lucide-react';
+import { Camera, Loader2, Calendar as CalendarIcon, Landmark, CheckCircle2, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface Account {
@@ -17,10 +17,17 @@ interface Account {
   uid: string;
 }
 
+// Merchant မှတ်တမ်းအတွက် structure သတ်မှတ်မယ်
+interface MerchantHistory {
+  name: string;
+  lastAmount: string;
+  lastCategory: string;
+}
+
 export default function AddTransaction() {
   const [description, setDescription] = useState('');
-  const [suggestions, setSuggestions] = useState<string[]>([]); // နာမည်ဟောင်းများစာရင်း
-  const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([]); // စစ်ထုတ်ထားသောစာရင်း
+  const [suggestions, setSuggestions] = useState<MerchantHistory[]>([]); // Object စာရင်း သိမ်းမယ်
+  const [filteredSuggestions, setFilteredSuggestions] = useState<MerchantHistory[]>([]); 
   const [showSuggestions, setShowSuggestions] = useState(false);
   const router = useRouter();
   const [amount, setAmount] = useState('');
@@ -37,20 +44,38 @@ export default function AddTransaction() {
       setUser(u);
       if (u) {
         try {
+          // ၁။ ဘဏ်အကောင့်များ ဆွဲထုတ်ခြင်း
           const q = query(collection(db, "chart_of_accounts"), where("uid", "==", u.uid));
           const snap = await getDocs(q);
           const accs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Account));
           setAccounts(accs);
           if (accs.length > 0) setBankAccount(accs[0].name);
 
+          // ၂။ စာရင်းဟောင်းများမှ ဆိုင်နာမည်၊ ပမာဏနှင့် Category များကို ဆွဲထုတ်ခြင်း
+          const transQuery = query(
+            collection(db, "transactions"), 
+            where("uid", "==", u.uid),
+            orderBy("date", "desc") // နောက်ဆုံးသွင်းထားတာ အရင်လာမယ်
+          );
+          const transSnap = await getDocs(transQuery);
+          
+          const historyMap: Record<string, MerchantHistory> = {};
+          transSnap.docs.forEach(doc => {
+            const d = doc.data();
+            // ဆိုင်နာမည်တစ်ခုအတွက် နောက်ဆုံးမှတ်တမ်းကိုပဲ Map ထဲထည့်မယ်
+            if (!historyMap[d.description]) {
+              historyMap[d.description] = {
+                name: d.description,
+                lastAmount: d.amount.toString(),
+                lastCategory: d.category
+              };
+            }
+          });
+          setSuggestions(Object.values(historyMap));
+
         } catch (err) {
-          console.error("Error fetching accounts:", err);
+          console.error("Error fetching data:", err);
         }
-        const transQuery = query(collection(db, "transactions"), where("uid", "==", u.uid));
-        const transSnap = await getDocs(transQuery);
-        const names = transSnap.docs.map(doc => doc.data().description);
-        const uniqueNames = Array.from(new Set(names)) as string[]; // နာမည်ထပ်တာတွေ ဖယ်မယ်
-        setSuggestions(uniqueNames);
       }
     });
     return () => unsubscribe();
@@ -93,17 +118,26 @@ export default function AddTransaction() {
     setPreview(compressedData);
   };
 
+  // စာရိုက်လိုက်တာနဲ့ Filter လုပ်မယ်
   const handleDescriptionChange = (val: string) => {
     setDescription(val);
     if (val.length > 1) {
-        const filtered = suggestions.filter(name => 
-            name.toLowerCase().includes(val.toLowerCase())
+        const filtered = suggestions.filter(m => 
+            m.name.toLowerCase().includes(val.toLowerCase())
         );
         setFilteredSuggestions(filtered);
         setShowSuggestions(true);
     } else {
         setShowSuggestions(false);
     }
+  };
+
+  // Suggestion ရွေးလိုက်တဲ့အခါ အကုန် auto-fill လုပ်မယ်
+  const selectSuggestion = (merchant: MerchantHistory) => {
+    setDescription(merchant.name);
+    setAmount(merchant.lastAmount);
+    setCategory(merchant.lastCategory);
+    setShowSuggestions(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -132,7 +166,6 @@ export default function AddTransaction() {
         uid: user.uid,
         verified: false
       });
-      // window.location.href = "/";
       router.push("/");
       router.refresh();
     } catch (error: any) {
@@ -144,13 +177,11 @@ export default function AddTransaction() {
 
   return (
     <Layout>
-      {/* Container ကို max-w-6xl သို့ တိုးချဲ့လိုက်ပါသည် */}
       <div className="max-w-6xl mx-auto pt-6 px-4 pb-40">
         <h2 className="text-3xl font-black mb-8 text-slate-900 tracking-tighter uppercase italic lg:text-left text-center">
             Add Record
         </h2>
         
-        {/* Desktop တွင် ၂-ကော်လံ၊ Mobile တွင် ၁-ကော်လံ ဖြစ်စေရန် grid သုံးပါသည် */}
         <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
           
           {/* ဘယ်ဘက်ခြမ်း: Photo Upload Area */}
@@ -178,40 +209,42 @@ export default function AddTransaction() {
           {/* ညာဘက်ခြမ်း: Data Input Fields Area */}
           <div className="bg-white p-8 lg:p-10 rounded-[2.5rem] shadow-2xl border border-slate-50 space-y-6">
             
-            {/* Merchant Name */}
+            {/* Merchant Name with Smart Auto-fill */}
             <div className="relative">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-2">Merchant Name / Description</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-2 flex items-center gap-2">
+                Merchant Name / Description <Sparkles size={12} className="text-emerald-500" />
+              </label>
                 <input 
                     type="text" 
                     value={description} 
                     onChange={e => handleDescriptionChange(e.target.value)} 
                     onFocus={() => description.length > 1 && setShowSuggestions(true)}
-                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)} // နှိပ်လို့ရအောင် ခဏစောင့်မှပိတ်မယ်
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                     placeholder="e.g. Costco, Amazon" 
                     className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-900 focus:border-emerald-500 focus:bg-white outline-none transition-all text-lg" 
                     required 
                   />
 
-                  {/* Suggestions List Dropdown */}
+                  {/* Smart Suggestions Dropdown */}
                   {showSuggestions && filteredSuggestions.length > 0 && (
                       <div className="absolute z-50 w-full mt-2 bg-white border-2 border-slate-100 rounded-3xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2">
-                          {filteredSuggestions.slice(0, 5).map((name, index) => (
+                          {filteredSuggestions.slice(0, 5).map((m, index) => (
                               <button
                                   key={index}
                                   type="button"
-                                  onClick={() => {
-                                      setDescription(name);
-                                      setShowSuggestions(false);
-                                  }}
-                                  className="w-full text-left p-4 hover:bg-emerald-50 font-bold text-slate-700 border-b last:border-0 border-slate-50 transition-colors flex items-center gap-3"
+                                  onClick={() => selectSuggestion(m)}
+                                  className="w-full text-left p-4 hover:bg-emerald-50 font-bold text-slate-700 border-b last:border-0 border-slate-50 transition-colors flex justify-between items-center"
                               >
-                                  <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
-                                  {name}
+                                  <div className="flex items-center gap-3">
+                                      <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                                      {m.name}
+                                  </div>
+                                  <span className="text-[9px] font-black text-slate-300 uppercase italic">Last: ${m.lastAmount}</span>
                               </button>
                           ))}
                       </div>
                   )}
-                </div>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Amount */}

@@ -23,10 +23,10 @@ export default function Dashboard() {
     const now = new Date();
     const year = now.getFullYear();
     const deadlines = [
-      new Date(year, 3, 15), // April 15 (Q1 Tax Due)
-      new Date(year, 5, 15), // June 15 (Q2 Tax Due)
-      new Date(year, 8, 15), // September 15 (Q3 Tax Due)
-      new Date(year + (now > new Date(year, 11, 15) ? 1 : 0), 0, 15) // January 15 (Q4 Tax Due) (next year if needed)
+      new Date(year, 3, 15), // April 15
+      new Date(year, 5, 15), // June 15
+      new Date(year, 8, 15), // Sept 15
+      new Date(year + (now > new Date(year, 11, 15) ? 1 : 0), 0, 15) // Jan 15 (next year if needed)
     ];
     const next = deadlines.find(d => d > now) || deadlines[0];
     const diff = Math.ceil((next.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));

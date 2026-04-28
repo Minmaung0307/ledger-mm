@@ -99,32 +99,44 @@ export default function TransactionsList() {
   };
 
   const handleUpdateTransaction = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editItem) return;
-
-    try {
-      let finalReceiptUrl = editItem.receiptUrl;
-
-      // အကယ်၍ ပုံအသစ် ရွေးထားတယ်ဆိုရင် Storage တင်မယ်
-      if (editItem.newFile) {
-        const storageRef = ref(storage, `receipts/${auth.currentUser?.uid}/${Date.now()}.jpg`);
-        await uploadBytes(storageRef, editItem.newFile);
-        finalReceiptUrl = await getDownloadURL(storageRef);
+      e.preventDefault();
+      
+      // ၁။ editItem ရှိမရှိနဲ့ ID ပါမပါ အရင်စစ်မယ်
+      if (!editItem || !editItem.id) {
+          alert("Error: Missing record ID. Please refresh and try again.");
+          return;
       }
 
-      await updateDoc(doc(db, "transactions", editItem.id), {
-        description: editItem.description,
-        amount: parseFloat(editItem.amount),
-        category: editItem.category,
-        bankAccount: editItem.bankAccount || "Other",
-        transactionDate: new Date(editItem.tempDate),
-        receiptUrl: finalReceiptUrl
-      });
+      try {
+        let finalReceiptUrl = editItem.receiptUrl || "";
 
-      setEditItem(null);
-      alert("Updated successfully!");
-      window.location.reload();
-    } catch (error) { alert("Error updating record"); }
+        // ၂။ ပုံအသစ် ရွေးထားတယ်ဆိုရင် Storage အရင်တင်မယ်
+        if (editItem.newFile) {
+          const storageRef = ref(storage, `receipts/${auth.currentUser?.uid}/${Date.now()}.jpg`);
+          await uploadBytes(storageRef, editItem.newFile);
+          finalReceiptUrl = await getDownloadURL(storageRef);
+        }
+
+        // ၃။ Firestore မှာ တကယ်သွားပြင်မယ့်အပိုင်း
+        const docRef = doc(db, "transactions", editItem.id);
+        await updateDoc(docRef, {
+          description: editItem.description,
+          amount: Number(editItem.amount), // parseFloat အစား Number သုံးတာ ပိုစိတ်ချရပါတယ်
+          category: editItem.category,
+          bankAccount: editItem.bankAccount || "Cash/Other",
+          transactionDate: new Date(editItem.tempDate),
+          receiptUrl: finalReceiptUrl
+        });
+
+        setEditItem(null);
+        alert("Updated successfully!");
+        window.location.reload(); // UI refresh ဖြစ်သွားအောင်
+        
+      } catch (error: any) {
+        // ၄။ Error တက်ရင် Console မှာ အသေးစိတ်ကြည့်လို့ရအောင် လုပ်ထားပါတယ်
+        console.error("Detailed Update Error:", error);
+        alert("Update Failed: " + error.message);
+      }
   };
 
   const filteredTransactions = transactions.filter(t => {
@@ -198,7 +210,8 @@ export default function TransactionsList() {
                             
                             // ၂။ editItem ထဲကို Data ထည့်တဲ့အခါ category ကို သေချာ လက်ဆင့်ကမ်းမယ်
                             setEditItem({ 
-                              ...item, 
+                              ...item, // <--- ဒါလေးက ID ပါသွားအောင် လုပ်ပေးတာပါ
+                              id: item.id, // <--- သေချာအောင် ID ကို ထပ်ထည့်ပေးလိုက်ပါ
                               category: item.category, // လက်ရှိ category ကို အသေအချာ bind လုပ်လိုက်တာပါ
                               tempDate: dateObj.toISOString().split('T')[0] 
                             });

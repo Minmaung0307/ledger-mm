@@ -24,21 +24,38 @@ export default function BankStatements() {
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        const startOfYear = new Date(selectedYear, 0, 1);
-        const endOfYear = new Date(selectedYear, 11, 31, 23, 59, 59);
-        const q = query(collection(db, "bank_statements"), where("uid", "==", user.uid), where("createdAt", ">=", startOfYear), where("createdAt", "<=", endOfYear), orderBy("createdAt", "desc"));
-        onSnapshot(q, (snap) => {
-          setStatements(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        // ရွေးချယ်ထားသော နှစ်၏ Range သတ်မှတ်ခြင်း
+        const start = new Date(selectedYear, 0, 1);
+        const end = new Date(selectedYear, 11, 31, 23, 59, 59);
+
+        const q = query(
+          collection(db, "bank_statements"), 
+          where("uid", "==", user.uid), 
+          where("createdAt", ">=", start),
+          where("createdAt", "<=", end),
+          orderBy("createdAt", "desc")
+        );
+
+        const unsubscribeData = onSnapshot(q, (snap) => {
+          const docs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          console.log("Found Documents:", docs.length); // Debug အတွက် ထည့်ထားပါသည်
+          setStatements(docs);
+          setLoading(false);
+        }, (error) => {
+          // --- အကယ်၍ Index မရှိလျှင် ဤနေရာတွင် Link ပြပါလိမ့်မည် ---
+          console.error("Firestore Listen Error:", error);
+          if (error.message.includes("requires an index")) {
+              alert("Firebase Index ဆောက်ရန် လိုအပ်နေပါသည်။ Browser Console (F12) တွင် Link ကို နှိပ်ပေးပါ။");
+          }
           setLoading(false);
         });
 
+        // ဘဏ်အကောင့်စာရင်း ဆွဲထုတ်ခြင်း
         const qAcc = query(collection(db, "chart_of_accounts"), where("uid", "==", user.uid));
         const accSnap = await getDocs(qAcc);
-        const accList = accSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
-        setAccounts(accList);
-        if (accList.length > 0 && !accName) {
-            setAccName(accList[0].name);
-        }
+        setAccounts(accSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any)));
+
+        return () => unsubscribeData();
       }
     });
     return () => unsubscribeAuth();

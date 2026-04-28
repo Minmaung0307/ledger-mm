@@ -237,19 +237,41 @@ export default function Dashboard() {
 
       {/* Chart Section */}
       <div className="bg-white p-8 md:p-12 rounded-[3.5rem] shadow-2xl border-2 border-slate-50 mb-14 overflow-hidden">
-        <h3 className="font-black text-slate-900 uppercase text-xs tracking-widest mb-10 text-center italic tracking-[0.3em]">Monthly Performance Flow</h3>
-        <div className="h-[350px] w-full min-h-[350px]"> {/* min-h ထည့်ပေးတာ ပိုကောင်းပါတယ် */}
-          {isMounted && chartData.length > 0 && (
-            <ResponsiveContainer width="100%" height="100%">
+        <h3 className="font-black text-slate-900 uppercase text-xs tracking-widest mb-10 text-center italic tracking-[0.3em]">
+          Monthly Performance Flow
+        </h3>
+
+        {/* Container div မှာ အမြင့်ကို ပုံသေ သတ်မှတ်ပေးထားပါမယ် */}
+        <div className="h-[350px] w-full"> 
+          {isMounted && chartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={350} debounce={50}> 
+              {/* ^^^ height ကို 100% အစား 350 လို့ ပြောင်းလိုက်ပါ၊ debounce လည်း ထည့်လိုက်ပါတယ် */}
+              
               <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#cbd5e1', fontWeight: 'bold', fontSize: 11}} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#cbd5e1', fontSize: 11}} />
-                <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={{borderRadius: '24px', border: 'none', boxShadow: '0 25px 50px -12px rgb(0 0 0 / 0.15)', fontWeight: 'bold'}} />
+                <XAxis 
+                  dataKey="month" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{fill: '#475569', fontWeight: 'bold', fontSize: 11}} 
+                />
+                <YAxis 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{fill: '#475569', fontSize: 11}} 
+                />
+                <Tooltip 
+                  cursor={{fill: '#f8fafc'}} 
+                  contentStyle={{borderRadius: '24px', border: 'none', boxShadow: '0 25px 50px -12px rgb(0 0 0 / 0.15)', fontWeight: 'bold'}} 
+                />
                 <Bar dataKey="income" fill="#10b981" radius={[10, 10, 0, 0]} barSize={40} />
                 <Bar dataKey="expense" fill="#f43f5e" radius={[10, 10, 0, 0]} barSize={40} />
               </BarChart>
             </ResponsiveContainer>
+          ) : (
+            <div className="h-full w-full flex items-center justify-center text-slate-300 font-bold italic uppercase tracking-widest text-xs">
+              Preparing Analytics...
+            </div>
           )}
         </div>
       </div>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import { db, auth, storage } from '@/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 import { collection, addDoc, query, where, onSnapshot, serverTimestamp, orderBy } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { UploadCloud, FileText, Download, Trash2, Loader2, Plus } from 'lucide-react';
@@ -15,12 +16,28 @@ export default function BankStatements() {
   const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(
-      query(collection(db, "bank_statements"), where("uid", "==", auth.currentUser?.uid), orderBy("createdAt", "desc")),
-      (snap) => setStatements(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))
-    );
-    return () => unsubscribe();
-  }, []);
+  // ၁။ အရင်ဆုံး Login ဝင်ထားတဲ့ User ရှိမရှိ အသေအချာ စောင့်ကြည့်မယ်
+  const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+    if (user) {
+      // ၂။ User ရှိတာ သေချာမှသာ Query ကို run မယ် (ဒါဆိုရင် undefined မဖြစ်တော့ပါဘူး)
+      const q = query(
+        collection(db, "bank_statements"), 
+        where("uid", "==", user.uid), 
+        orderBy("createdAt", "desc")
+      );
+
+      const unsubscribeData = onSnapshot(q, (snap) => {
+        setStatements(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      });
+
+      // Cleanup Data listener
+      return () => unsubscribeData();
+    }
+  });
+
+  // Cleanup Auth listener
+  return () => unsubscribeAuth();
+}, []);
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();

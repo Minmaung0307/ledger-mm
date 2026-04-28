@@ -57,11 +57,11 @@ export default function BankStatements() {
           <form onSubmit={handleUpload} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
             <div>
               <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block ml-2">Account Name</label>
-              <input type="text" value={accName} onChange={e => setAccName(e.target.value)} placeholder="e.g. BoA Checking" className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold" required />
+              <input type="text" value={accName} onChange={e => setAccName(e.target.value)} placeholder="e.g. BoA Checking" className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-900 placeholder:text-slate-300 focus:border-emerald-500 focus:bg-white outline-none transition-all" required />
             </div>
             <div>
               <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block ml-2">Period (Month/Year)</label>
-              <input type="text" value={period} onChange={e => setPeriod(e.target.value)} placeholder="e.g. April 2026" className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold" required />
+              <input type="text" value={period} onChange={e => setPeriod(e.target.value)} placeholder="e.g. April 2026" className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-900 placeholder:text-slate-300 focus:border-emerald-500 focus:bg-white outline-none transition-all" required />
             </div>
             <div>
               <label className="w-full cursor-pointer bg-slate-50 border-2 border-dashed border-slate-200 p-4 rounded-2xl flex items-center justify-center gap-2 hover:border-emerald-400 transition">

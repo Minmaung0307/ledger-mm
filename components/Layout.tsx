@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Receipt, ShoppingCart, 
   Users, Landmark, FileBarChart, Settings, LogOut, 
   List, ImageIcon, FileText, Menu, X, ChevronRight, 
-  ExternalLink
+  ExternalLink, UploadCloud
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -55,6 +55,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         { icon: <ShoppingCart size={20}/>, label: 'Purchases/Bills', href: '/transactions' },
         { icon: <ImageIcon size={20}/>, label: 'Receipts Gallery', href: '/receipts' },
         { icon: <FileText size={20}/>, label: 'Bank Statements', href: '/banking/statements' },
+        { icon: <UploadCloud size={20}/>, label: 'Excel/CSV Import', href: '/banking/import' },
       ]
     },
     {

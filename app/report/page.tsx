@@ -4,43 +4,89 @@ import { useEffect, useState } from 'react';
 import Layout from '@/components/Layout';
 import { db, auth } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy, doc, getDoc, setDoc } from 'firebase/firestore';
 import { TAX_CATEGORIES } from '@/lib/constants';
-import { Calendar, ExternalLink, FileBarChart, Printer, Download, ChevronDown, Info, PieChart, Landmark, AlertCircle, X } from 'lucide-react';
+import { Calendar, ExternalLink, FileBarChart, Printer, Download, ChevronDown, Info, PieChart, Landmark, AlertCircle, X, Edit, Save, Loader2 } from 'lucide-react';
 
 export default function ProfitLossReport() {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [activeTip, setActiveTip] = useState<any>(null);
+  const [taxNote, setTaxNote] = useState('');
+  const [isSavingNote, setIsSavingNote] = useState(false);
 
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: currentYear - 2024 + 2 }, (_, i) => 2024 + i);
 
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        const startOfYear = new Date(selectedYear, 0, 1);
-        const endOfYear = new Date(selectedYear, 11, 31, 23, 59, 59);
+      // ၁။ Auth State ကို စောင့်ကြည့်မယ်
+      const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+        if (user) {
+          // --- (က) စာရင်းများ (Transactions) ဆွဲယူခြင်း ---
+          const startOfYear = new Date(selectedYear, 0, 1);
+          const endOfYear = new Date(selectedYear, 11, 31, 23, 59, 59);
 
-        const q = query(
-          collection(db, "transactions"),
-          where("uid", "==", user.uid),
-          where("date", ">=", startOfYear),
-          where("date", "<=", endOfYear),
-          orderBy("date", "desc")
-        );
+          const q = query(
+            collection(db, "transactions"),
+            where("uid", "==", user.uid),
+            where("date", ">=", startOfYear),
+            where("date", "<=", endOfYear),
+            orderBy("date", "desc")
+          );
 
-        const unsubscribeData = onSnapshot(q, (snapshot) => {
-          setData(snapshot.docs.map(doc => doc.data()));
+          const unsubscribeData = onSnapshot(q, (snapshot) => {
+            setData(snapshot.docs.map(doc => doc.data()));
+            setLoading(false);
+          }, (error) => {
+            console.error("Firestore error:", error);
+            setLoading(false);
+          });
+
+          // --- (ခ) မှတ်စု (Tax Note) ဆွဲယူခြင်း ---
+          try {
+            const noteRef = doc(db, "tax_notes", `${user.uid}_${selectedYear}`);
+            const noteSnap = await getDoc(noteRef);
+            if (noteSnap.exists()) {
+              setTaxNote(noteSnap.data().content);
+            } else {
+              setTaxNote(''); // မှတ်စု မရှိသေးရင် အလွတ်ပြမယ်
+            }
+          } catch (err) {
+            console.error("Error fetching note:", err);
+          }
+
+          // Cleanup function: Listener တွေကို ပြန်ပိတ်မယ်
+          return () => {
+            unsubscribeData();
+          };
+        } else {
           setLoading(false);
-        }, () => setLoading(false));
+        }
+      });
 
-        return () => unsubscribeData();
-      }
-    });
-    return () => unsubscribeAuth();
-  }, [selectedYear]);
+      return () => unsubscribeAuth();
+    }, [selectedYear]);
+
+  const saveNote = async () => {
+    const user = auth.currentUser;
+    if (!user) return;
+    setIsSavingNote(true);
+    try {
+      const noteRef = doc(db, "tax_notes", `${user.uid}_${selectedYear}`);
+      await setDoc(noteRef, {
+        content: taxNote,
+        year: selectedYear,
+        uid: user.uid,
+        updatedAt: new Date()
+      });
+      alert(`${selectedYear} မှတ်စုကို သိမ်းဆည်းပြီးပါပြီ။`);
+    } catch (err) {
+      alert("သိမ်းဆည်းရတာ အဆင်မပြေပါ");
+    } finally {
+      setIsSavingNote(false);
+    }
+  };
 
   const calculateTotal = (catValue: string) => {
     return data.filter(d => d.category === catValue).reduce((s, i) => s + i.amount, 0);
@@ -220,6 +266,37 @@ export default function ProfitLossReport() {
                     ${(income - expenses).toLocaleString(undefined, {minimumFractionDigits: 2})}
                 </h3>
             </div>
+        </div>
+
+        {/* --- Yearly Tax Notes Section --- */}
+        <div className="mt-16 bg-white p-8 rounded-[3rem] shadow-2xl border-2 border-slate-50 no-print">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center text-amber-600">
+              <Edit size={20} />
+            </div>
+            <div>
+              <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">{selectedYear} Tax Notes & Strategy</h3>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">ဒီနှစ်အတွက် သီးသန့်မှတ်ချက်များ</p>
+            </div>
+          </div>
+
+          <textarea 
+            value={taxNote}
+            onChange={(e) => setTaxNote(e.target.value)}
+            placeholder={`${selectedYear} ခုနှစ် အခွန်ဆောင်ရမည့် အစီအစဉ်များ၊ သတိထားရမည့်အချက်များကို ဒီမှာ ရေးမှတ်ထားနိုင်ပါသည်...`}
+            className="w-full h-40 p-6 bg-slate-50 border-2 border-slate-100 rounded-[2rem] font-bold text-slate-700 focus:border-amber-400 focus:bg-white outline-none transition-all resize-none"
+          />
+
+          <div className="mt-4 flex justify-end">
+            <button 
+              onClick={saveNote}
+              disabled={isSavingNote}
+              className="bg-amber-500 text-white px-8 py-3 rounded-2xl font-black text-xs flex items-center gap-2 shadow-lg hover:bg-slate-900 transition active:scale-95 disabled:bg-slate-200"
+            >
+              {isSavingNote ? <Loader2 className="animate-spin" size={16}/> : <Save size={16}/>}
+              SAVE {selectedYear} NOTES
+            </button>
+          </div>
         </div>
 
         {/* --- Mapping Guide Section --- */}

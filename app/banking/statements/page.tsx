@@ -22,6 +22,11 @@ export default function BankStatements() {
   const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
+  // အခုကနေ စပြီး ခုနှစ်တွေကို အလိုလို တွက်ချက်ပေးမယ့် logic ပါ
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: currentYear - 2024 + 2 }, (_, i) => 2024 + i);
+  // ၂၀၂၄ ကနေ စပြီး လက်ရှိနှစ် + ၁ နှစ်အထိ အမြဲ ထုတ်ပေးနေမှာပါ
+
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       if (user) {
@@ -105,14 +110,15 @@ export default function BankStatements() {
                 
                 <div className="mt-4 relative inline-block group">
                     <select 
-                        value={selectedYear}
-                        onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                        className="appearance-none bg-emerald-600 text-white px-6 py-2.5 pr-10 rounded-2xl font-black text-sm outline-none cursor-pointer hover:bg-slate-900 transition-all shadow-xl"
-                    >
-                        {[2024, 2025, 2026, 2027].map(year => (
-                            <option key={year} value={year}>{year} ARCHIVE</option>
-                        ))}
-                    </select>
+    value={selectedYear}
+    onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+    className="appearance-none bg-emerald-600 text-white px-6 py-2.5 pr-10 rounded-2xl font-black text-sm outline-none cursor-pointer hover:bg-slate-900 transition-all shadow-xl"
+>
+    {/* လက်ရှိနှစ်အလိုက် အလိုလို ထွက်လာမယ့် years list ကို သုံးပါမယ် */}
+    {years.reverse().map(year => (
+        <option key={year} value={year}>{year} ARCHIVE</option>
+    ))}
+</select>
                     <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-200 pointer-events-none" />
                 </div>
             </div>

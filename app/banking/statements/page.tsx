@@ -24,22 +24,18 @@ export default function BankStatements() {
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // ၁။ Statements ဆွဲထုတ်ခြင်း
-        const start = new Date(selectedYear, 0, 1);
-        const end = new Date(selectedYear, 11, 31, 23, 59, 59);
-        const q = query(collection(db, "bank_statements"), where("uid", "==", user.uid), where("createdAt", ">=", start), where("createdAt", "<=", end), orderBy("createdAt", "desc"));
+        const startOfYear = new Date(selectedYear, 0, 1);
+        const endOfYear = new Date(selectedYear, 11, 31, 23, 59, 59);
+        const q = query(collection(db, "bank_statements"), where("uid", "==", user.uid), where("createdAt", ">=", startOfYear), where("createdAt", "<=", endOfYear), orderBy("createdAt", "desc"));
         onSnapshot(q, (snap) => {
           setStatements(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
           setLoading(false);
         });
 
-        // ၂။ ဘဏ်အကောင့်များ ဆွဲထုတ်ခြင်း
         const qAcc = query(collection(db, "chart_of_accounts"), where("uid", "==", user.uid));
         const accSnap = await getDocs(qAcc);
         const accList = accSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
         setAccounts(accList);
-        
-        // အရေးကြီးသည်: အကောင့်ရှိလျှင် တန်ဖိုးကို ချက်ချင်း Set လုပ်ပေးပါမည်
         if (accList.length > 0 && !accName) {
             setAccName(accList[0].name);
         }
@@ -48,14 +44,23 @@ export default function BankStatements() {
     return () => unsubscribeAuth();
   }, [selectedYear]);
 
-  const handleBulkUpload = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // --- ပြင်ဆင်လိုက်သော အပိုင်း: handleBulkUpload ကို onClick ဖြင့် တိုက်ရိုက်ခေါ်ခြင်း ---
+  const handleBulkUpload = async () => {
     const user = auth.currentUser;
     
-    // Logic စစ်ဆေးချက် (Debug လုပ်ရန်)
-    console.log("Starting Upload for:", accName, "Files:", files.length);
+    // Debug အတွက် Console မှာ ကြည့်ရန်
+    console.log("Upload Button Triggered");
+    console.log("Files:", files.length, "Account:", accName);
 
-    if (files.length === 0 || isUploading || !user) return;
+    if (files.length === 0) {
+      alert("Please select files first!");
+      return;
+    }
+    if (!accName) {
+      alert("Please select an account!");
+      return;
+    }
+    if (isUploading || !user) return;
     
     setIsUploading(true);
     try {
@@ -70,25 +75,59 @@ export default function BankStatements() {
         let period = dateMatch ? `${monthNames[parseInt(dateMatch[2])-1]} ${dateMatch[1]}` : file.name.split('_')[0];
 
         await addDoc(collection(db, "bank_statements"), {
-          accountName: accName || "Other Account", // Default တန်ဖိုးထည့်ထားပါမည်
+          accountName: accName,
           period, fileUrl: url, storagePath: path, uid: user.uid, createdAt: serverTimestamp()
         });
       }
       setFiles([]); 
-      alert("Success! Statements Uploaded.");
+      alert("All statements uploaded successfully!");
     } catch (err) { 
-      alert("Upload failed. Please try again."); 
+      alert("Error: Some files failed to upload."); 
     } finally { 
-      setIsUploading(false); // အမှားတက်တက်၊ အောင်မြင်မြင် ခလုတ်ကို ပြန်ဖွင့်ပေးပါမည်
+      setIsUploading(false);
     }
   };
 
-  // ... (syncWithAI နဲ့ handleDelete logic တွေက အရင်အတိုင်းပဲမို့လို့ ချန်ခဲ့ပါမယ်) ...
+  const handleDelete = async (id: string, storagePath: string) => {
+    if (!confirm("Are you sure you want to delete this statement?")) return;
+    try {
+      await deleteDoc(doc(db, "bank_statements", id));
+      if (storagePath) {
+        const fileRef = ref(storage, storagePath);
+        await deleteObject(fileRef).catch(() => {});
+      }
+      alert("Deleted!");
+    } catch (err) { alert("Delete failed"); }
+  };
+
+  const syncWithAI = async (statementId: string, fileUrl: string, account: string) => {
+    const confirmSync = confirm(`AI will now read this statement and sync to [${account}]. Continue?`);
+    if (!confirmSync) return;
+    setIsSyncing(statementId);
+    try {
+      const apiRes = await fetch('/api/extract-statement', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileUrl: fileUrl }) 
+      });
+      const result = await apiRes.json();
+      if (!apiRes.ok) throw new Error(result.error || "AI Sync Failed");
+      for (const t of result) {
+        await addDoc(collection(db, "transactions"), {
+          description: t.description, amount: Math.abs(t.amount),
+          category: t.amount > 0 ? 'income' : (t.category || 'other'),
+          transactionDate: new Date(t.date), date: serverTimestamp(),
+          uid: auth.currentUser?.uid, verified: true, bankAccount: account
+        });
+      }
+      alert(`Successfully synced ${result.length} transactions!`);
+    } catch (err: any) { alert(err.message); } finally { setIsSyncing(null); }
+  };
 
   return (
     <Layout>
       <div className="pt-6 pb-40 max-w-6xl mx-auto px-4">
-        {/* Header Section */}
+        {/* Header */}
         <div className="flex justify-between items-center mb-10">
             <h2 className="text-4xl font-black text-slate-900 tracking-tighter uppercase italic">eStatements</h2>
             <select value={selectedYear} onChange={e => setSelectedYear(parseInt(e.target.value))} className="bg-emerald-600 text-white px-4 py-2 rounded-xl font-black text-xs outline-none shadow-lg">
@@ -96,28 +135,22 @@ export default function BankStatements() {
             </select>
         </div>
 
-        {/* Upload Form Box */}
+        {/* --- ပြင်ဆင်လိုက်သော Upload Box: Form မဟုတ်ဘဲ Div ဖြစ်သွားပါသည် --- */}
         <div className="bg-white p-8 md:p-10 rounded-[3rem] shadow-2xl border-2 border-slate-50 mb-16">
-          <form onSubmit={handleBulkUpload} className="space-y-6">
+          <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
-                {/* Account Selection */}
                 <div>
                     <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block ml-2">Select Account</label>
                     <select 
                         value={accName} 
                         onChange={e => setAccName(e.target.value)} 
-                        className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-900 focus:border-emerald-500 outline-none"
+                        className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-900 focus:border-emerald-500 outline-none appearance-none"
                     >
-                        {accounts.length > 0 ? (
-                            accounts.map(acc => <option key={acc.id} value={acc.name}>{acc.name}</option>)
-                        ) : (
-                            <option value="">No Accounts Found</option>
-                        )}
+                        {accounts.map(acc => <option key={acc.id} value={acc.name}>{acc.name}</option>)}
                         <option value="Cash/Other">Cash / Other</option>
                     </select>
                 </div>
 
-                {/* File Selection */}
                 <label className="cursor-pointer bg-emerald-50 border-2 border-dashed border-emerald-200 p-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-emerald-100 transition-all">
                     <UploadCloud size={20} className="text-emerald-500" />
                     <span className="font-black text-emerald-700 uppercase text-xs">
@@ -127,25 +160,57 @@ export default function BankStatements() {
                 </label>
             </div>
 
-            {/* Upload Button */}
+            {/* Submit Button ပြောင်းလဲခြင်း */}
             <button 
-                type="submit" 
+                type="button" // type="submit" အစား "button" ဖြစ်သွားပါပြီ
+                onClick={handleBulkUpload} // onClick ဖြင့် တိုက်ရိုက်ချိတ်ဆက်ပါသည်
                 disabled={isUploading || files.length === 0} 
                 className={`w-full p-5 rounded-2xl font-black uppercase tracking-widest shadow-xl transition-all active:scale-95 flex items-center justify-center gap-3 ${
-                    isUploading || files.length === 0 ? 'bg-slate-100 text-slate-300 cursor-not-allowed' : 'bg-[#0F172A] text-white hover:bg-emerald-600 shadow-emerald-100/50'
+                    isUploading || files.length === 0 ? 'bg-slate-100 text-slate-300 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-slate-900 shadow-emerald-500/20'
                 }`}
             >
                 {isUploading ? (
-                    <><Loader2 className="animate-spin" size={20} /> UPLOADING TO CLOUD...</>
+                    <><Loader2 className="animate-spin" size={20} /> UPLOADING...</>
                 ) : (
                     "UPLOAD STATEMENTS"
                 )}
             </button>
-          </form>
+          </div>
         </div>
 
-        {/* ... (အောက်က List အပိုင်းတွေက အရင်အတိုင်းပဲမို့လို့ ချန်ခဲ့ပါမယ်) ... */}
-        
+        {/* List of Statements */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {loading ? (
+             <p className="col-span-full text-center animate-pulse font-black uppercase text-slate-300 tracking-widest">Loading Records...</p>
+          ) : statements.length === 0 ? (
+            <div className="col-span-full bg-white p-20 rounded-[3rem] border-4 border-dashed border-slate-100 text-center text-slate-200 font-black italic uppercase">No records found</div>
+          ) : (
+            statements.map(s => (
+              <div key={s.id} className="bg-white p-6 rounded-[2.5rem] border-2 border-slate-50 shadow-lg flex flex-col justify-between group hover:border-emerald-500 transition-all min-h-[220px] relative overflow-hidden">
+                <div className="flex items-start justify-between">
+                    <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 group-hover:bg-emerald-100 group-hover:text-emerald-600 transition shadow-inner"><FileText size={24}/></div>
+                    <div className="flex gap-2">
+                        <a href={s.fileUrl} target="_blank" rel="noreferrer" className="p-3 bg-slate-50 text-slate-400 rounded-2xl hover:bg-slate-900 hover:text-white transition"><ExternalLink size={18}/></a>
+                        <button onClick={() => handleDelete(s.id, s.storagePath)} className="p-3 bg-rose-50 text-rose-300 rounded-2xl hover:bg-rose-600 hover:text-white transition"><Trash2 size={18}/></button>
+                    </div>
+                </div>
+                <div className="mt-4">
+                    <p className="font-black text-slate-900 text-lg leading-tight truncate pr-4">{s.accountName}</p>
+                    <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mt-1 mb-4 flex items-center gap-2">
+                        <CheckCircle2 size={12}/> {s.period}
+                    </p>
+                    <button 
+                        onClick={() => syncWithAI(s.id, s.fileUrl, s.accountName)}
+                        disabled={isSyncing === s.id}
+                        className="w-full flex items-center justify-center gap-2 bg-emerald-600 text-white py-3 rounded-xl font-black text-[10px] shadow-lg hover:bg-slate-900 transition-all uppercase disabled:bg-slate-200"
+                    >
+                        {isSyncing === s.id ? <><Loader2 size={12} className="animate-spin" /> SYNCING...</> : <><Sparkles size={12}/> AI Sync to Ledger</>}
+                    </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
     </Layout>
   );

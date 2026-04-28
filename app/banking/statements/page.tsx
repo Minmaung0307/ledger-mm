@@ -118,27 +118,44 @@ export default function BankStatements() {
   };
 
   const syncWithAI = async (statementId: string, fileUrl: string, account: string) => {
-    const confirmSync = confirm(`AI will now read this statement and sync to [${account}]. Continue?`);
+    const confirmSync = confirm(`AI will now sync this statement to [${account}]. Continue?`);
     if (!confirmSync) return;
+
     setIsSyncing(statementId);
     try {
-      const apiRes = await fetch('/api/extract-statement', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileUrl: fileUrl }) 
-      });
-      const result = await apiRes.json();
-      if (!apiRes.ok) throw new Error(result.error || "AI Sync Failed");
-      for (const t of result) {
-        await addDoc(collection(db, "transactions"), {
-          description: t.description, amount: Math.abs(t.amount),
-          category: t.amount > 0 ? 'income' : (t.category || 'other'),
-          transactionDate: new Date(t.date), date: serverTimestamp(),
-          uid: auth.currentUser?.uid, verified: true, bankAccount: account
+        // PDF ကို ပို့မယ့်အစား URL ကိုပဲ ပို့လိုက်ပါမယ် (ပိုမြန်ပြီး 500 error ကင်းစေပါတယ်)
+        const apiRes = await fetch('/api/extract-statement', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fileUrl: fileUrl }) 
         });
-      }
-      alert(`Successfully synced ${result.length} transactions!`);
-    } catch (err: any) { alert(err.message); } finally { setIsSyncing(null); }
+
+        if (!apiRes.ok) {
+            const errData = await apiRes.json();
+            throw new Error(errData.details || "AI Timeout or Error");
+        }
+
+        const transactions = await apiRes.json();
+
+        // Database ထဲ တစ်ခုချင်းစီ သွင်းမယ်
+        for (const t of transactions) {
+            await addDoc(collection(db, "transactions"), {
+                description: t.description,
+                amount: Math.abs(t.amount),
+                category: t.amount > 0 ? 'income' : 'other',
+                transactionDate: new Date(t.date),
+                date: serverTimestamp(),
+                uid: auth.currentUser?.uid,
+                verified: true,
+                bankAccount: account
+            });
+        }
+        alert(`Success! Added ${transactions.length} records to Ledger.`);
+    } catch (err: any) {
+        alert("AI Sync Error: " + err.message);
+    } finally {
+        setIsSyncing(null);
+    }
   };
 
   return (

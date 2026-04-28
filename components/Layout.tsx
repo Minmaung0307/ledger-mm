@@ -166,13 +166,23 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <Link href="/settings" className={`flex items-center gap-4 p-4 rounded-2xl font-bold mb-2 transition-all ${pathname === '/settings' ? 'bg-slate-900 dark:bg-white dark:text-slate-900 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}><Settings size={20}/> Settings</Link>
           
           {/* Dark Mode Toggle Button */}
-          <button onClick={toggleDark} className="flex items-center gap-4 p-4 w-full text-slate-400 font-bold hover:bg-slate-50 dark:hover:bg-slate-800 rounded-2xl mb-2 transition-all active:scale-95">
-            {isDark ? (
-              <span className="flex items-center gap-4"><Sun size={20} className="text-amber-400" /> Light Mode</span>
-            ) : (
-              <span className="flex items-center gap-4"><Moon size={20} /> Dark Mode</span>
-            )}
-          </button>
+          <button 
+  onClick={toggleDark} 
+  className="flex items-center gap-4 p-4 w-full text-slate-500 dark:text-slate-400 font-black hover:bg-slate-50 dark:hover:bg-slate-800 rounded-2xl mb-2 transition-all active:scale-95"
+>
+  {isDark ? (
+    <div className="flex items-center gap-4 text-amber-400">
+      <Sun size={20} />
+      <span>Light Mode</span>
+    </div>
+  ) : (
+    <div className="flex items-center gap-4 text-slate-600">
+      {/* ဒီနေရာမှာ Plus ကို သုံးလိုက်ရင် အရောင်ပြန်တောက်လာပါလိမ့်မယ် */}
+      <Moon size={20} />
+      <span>Dark Mode</span>
+    </div>
+  )}
+</button>
 
           <button onClick={logout} className="flex items-center gap-4 p-4 w-full text-rose-500 font-black hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-2xl transition-all active:scale-95 group">
             <LogOut size={20} className="group-hover:-translate-x-1 transition-transform" /> Logout
@@ -218,10 +228,23 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     ))}
                     <div className="pt-6 border-t border-slate-100 dark:border-slate-800 space-y-3">
                         {/* Mobile Dark Mode Toggle */}
-                        <button onClick={toggleDark} className="flex items-center gap-4 p-4 w-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-black rounded-2xl">
-                          {isDark ? <Sun size={20} className="text-amber-400" /> : <Moon size={20} />}
-                          {isDark ? 'Light Mode' : 'Dark Mode'}
-                        </button>
+                        <button 
+  onClick={toggleDark} 
+  className="flex items-center gap-4 p-4 w-full text-slate-500 dark:text-slate-400 font-black hover:bg-slate-50 dark:hover:bg-slate-800 rounded-2xl mb-2 transition-all active:scale-95"
+>
+  {isDark ? (
+    <div className="flex items-center gap-4 text-amber-400">
+      <Sun size={20} />
+      <span>Light Mode</span>
+    </div>
+  ) : (
+    <div className="flex items-center gap-4 text-slate-600">
+      {/* ဒီနေရာမှာ Plus ကို သုံးလိုက်ရင် အရောင်ပြန်တောက်လာပါလိမ့်မယ် */}
+      <Moon size={20} />
+      <span>Dark Mode</span>
+    </div>
+  )}
+</button>
                         <Link href="/settings" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 rounded-2xl font-black bg-slate-900 dark:bg-white dark:text-slate-900 text-white shadow-lg"><Settings size={20}/> Business Settings</Link>
                         <button onClick={logout} className="flex items-center gap-4 p-4 w-full text-rose-500 font-black bg-rose-50 dark:bg-rose-900/20 rounded-2xl">Logout</button>
                     </div>

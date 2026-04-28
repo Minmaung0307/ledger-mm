@@ -7,7 +7,8 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
 import Papa from 'papaparse'; 
 import * as XLSX from 'xlsx'; 
-import { UploadCloud, CheckCircle2, AlertCircle, Loader2, ChevronDown } from 'lucide-react';
+import { UploadCloud, CheckCircle2, AlertCircle, Loader2, Info, ChevronDown, FileSpreadsheet } from 'lucide-react';
+import { TAX_CATEGORIES } from '@/lib/constants';
 
 interface Account { id: string; name: string; }
 
@@ -36,71 +37,55 @@ export default function CSVImport() {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    const reader = new FileReader();
     const fileExtension = file.name.split('.').pop()?.toLowerCase();
+    const reader = new FileReader();
 
     reader.onload = (evt) => {
+      let rawData: any[] = [];
       try {
-        let rows: any[] = [];
-        
         if (fileExtension === 'csv') {
           const text = evt.target?.result as string;
-          const result = Papa.parse(text, { header: false, skipEmptyLines: true });
-          rows = result.data;
+          const results = Papa.parse(text, { header: false, skipEmptyLines: true });
+          rawData = results.data;
         } else {
           const bstr = evt.target?.result;
           const wb = XLSX.read(bstr, { type: 'binary' });
-          const ws = wb.Sheets[wb.SheetNames[0]];
-          // header: 1 ဆိုတာက ပထမဆုံး စာကြောင်းကိုပဲ ယူတာမဟုတ်ဘဲ ဇယားတစ်ခုလုံးကို array အနေနဲ့ ယူတာပါ
-          rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
+          rawData = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
         }
 
-        // --- Smart Header Hunter Logic ---
-        // ဇယားထဲမှာ Date, Description, Amount ဆိုတဲ့ စာလုံးတွေ ဘယ် row မှာရှိလဲ လိုက်ရှာမယ်
         let headerRowIndex = -1;
         let dateCol = -1, descCol = -1, amtCol = -1;
 
-        for (let i = 0; i < rows.length; i++) {
-          const row = rows[i];
+        for (let i = 0; i < rawData.length; i++) {
+          const row = rawData[i];
           if (!Array.isArray(row)) continue;
-          
           const dIdx = row.findIndex(c => c?.toString().toLowerCase().includes('date'));
           const deIdx = row.findIndex(c => c?.toString().toLowerCase().includes('desc'));
           const aIdx = row.findIndex(c => c?.toString().toLowerCase().includes('amount'));
-
           if (dIdx !== -1 && aIdx !== -1) {
-            headerRowIndex = i;
-            dateCol = dIdx;
-            descCol = deIdx;
-            amtCol = aIdx;
+            headerRowIndex = i; dateCol = dIdx; descCol = deIdx; amtCol = aIdx;
             break;
           }
         }
 
         if (headerRowIndex === -1) {
-          alert("Excel ထဲမှာ 'Date' နဲ့ 'Amount' ဆိုတဲ့ ခေါင်းစဉ်တွေကို ရှာမတွေ့ပါ။ အပေါ်မှာ အလွတ်တွေရှိရင်လည်း ပြဿနာမရှိပါဘူး၊ ဒါပေမဲ့ ခေါင်းစဉ်စာသားတော့ အတိအကျ ပါရပါမယ်။");
+          alert("Excel ထဲတွင် 'Date' နှင့် 'Amount' ခေါင်းစဉ်များ ရှာမတွေ့ပါ။");
           return;
         }
 
-        // ခေါင်းစဉ်တွေ့တဲ့ row ရဲ့ အောက်ကနေ စပြီး data ယူမယ်
-        const normalized = rows.slice(headerRowIndex + 1).map(row => {
+        const normalized = rawData.slice(headerRowIndex + 1).map(row => {
           const amtRaw = row[amtCol]?.toString().replace(/[$,]/g, '') || "0";
           return {
             date: row[dateCol],
-            description: descCol !== -1 ? row[descCol] : 'No Description',
+            description: descCol !== -1 ? row[descCol] : 'Imported Item',
             amount: parseFloat(amtRaw)
           };
         }).filter(item => item.date && !isNaN(item.amount) && item.amount !== 0);
 
         setFileData(normalized);
         setIsDone(false);
-
-      } catch (err) {
-        alert("ဖိုင်ဖတ်ရတာ အဆင်မပြေပါ။");
-      }
+      } catch (err) { alert("File Read Error"); }
     };
-
     if (fileExtension === 'csv') reader.readAsText(file);
     else reader.readAsBinaryString(file);
   };
@@ -110,10 +95,19 @@ export default function CSVImport() {
     setIsProcessing(true);
     try {
       for (const row of fileData) {
+        const amt = row.amount;
+        let category = amt > 0 ? 'income' : 'other';
+
+        // --- Smart Category Detection ---
+        // အကယ်၍ Description ထဲမှာ Gas လို့ပါရင် Car / Truck Category ထဲ တန်းထည့်မယ်
+        if (amt < 0 && row.description.toLowerCase().includes('gas')) {
+            category = 'car_truck';
+        }
+
         await addDoc(collection(db, "transactions"), {
           description: row.description,
-          amount: Math.abs(row.amount),
-          category: row.amount > 0 ? 'income' : 'other',
+          amount: Math.abs(amt),
+          category: category,
           bankAccount: selectedAccount,
           transactionDate: new Date(row.date),
           date: serverTimestamp(),
@@ -123,12 +117,9 @@ export default function CSVImport() {
       }
       setIsDone(true);
       setFileData([]);
-      alert("အောင်မြင်စွာ စာရင်းသွင်းပြီးပါပြီ။");
-    } catch (err) {
-      alert("Error: နေ့စွဲ Format မမှန်ပါ။ (ဥပမာ - 04/15/2026)");
-    } finally {
-      setIsProcessing(false);
-    }
+      alert("စာရင်းသွင်းခြင်း အောင်မြင်ပါသည်။");
+    } catch (err) { alert("Import Error"); }
+    finally { setIsProcessing(false); }
   };
 
   return (
@@ -151,20 +142,18 @@ export default function CSVImport() {
             </div>
 
             <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block ml-2">2. Upload File</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block ml-2">2. Upload Excel / CSV</label>
               <label htmlFor="file-upload-input" className="w-full cursor-pointer bg-emerald-50 border-2 border-dashed border-emerald-200 p-5 rounded-3xl flex items-center justify-center gap-3 hover:bg-emerald-100 transition-all shadow-inner active:scale-95">
                 <UploadCloud size={24} className="text-emerald-500" />
-                <span className="font-black text-emerald-700 uppercase text-sm">
-                    {fileData.length > 0 ? `${fileData.length} Rows Detected` : 'CHOOSE FILE'}
-                </span>
+                <span className="font-black text-emerald-700 uppercase text-sm">{fileData.length > 0 ? `${fileData.length} Rows Detected` : 'CHOOSE FILE'}</span>
                 <input id="file-upload-input" type="file" accept=".csv, .xlsx, .xls" onChange={handleFileUpload} className="hidden" />
               </label>
             </div>
           </div>
 
-          {fileData.length > 0 ? (
+          {fileData.length > 0 && (
             <div className="pt-6 border-t-2 border-slate-50 animate-in fade-in slide-in-from-bottom-4">
-              <p className="text-[10px] font-black text-slate-400 uppercase mb-4 tracking-widest text-center">Data Preview (Ready to Sync)</p>
+              <p className="text-[10px] font-black text-slate-400 uppercase mb-4 tracking-widest text-center italic">Data Preview (Ready to Sync)</p>
               <div className="bg-slate-50 p-6 rounded-[2rem] mb-8 overflow-x-auto border border-slate-100">
                 <table className="w-full text-left text-xs">
                   <thead>
@@ -175,7 +164,7 @@ export default function CSVImport() {
                       <tr key={i} className="border-b last:border-0 border-slate-100">
                         <td className="py-4 text-slate-400">{row.date?.toString()}</td>
                         <td className="py-4 truncate max-w-[200px]">{row.description}</td>
-                        <td className={`py-4 text-right ${row.amount > 0 ? 'text-emerald-600' : 'text-rose-500'}`}>${row.amount}</td>
+                        <td className={`py-4 text-right font-black ${row.amount > 0 ? 'text-emerald-600' : 'text-rose-500'}`}>${row.amount}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -185,17 +174,46 @@ export default function CSVImport() {
                 {isProcessing ? <><Loader2 className="animate-spin" /> SYNCING...</> : "CONFIRM & SYNC TO LEDGER"}
               </button>
             </div>
-          ) : (
-            <div className="p-16 border-2 border-dashed border-slate-100 rounded-[3rem] text-center text-slate-300 font-black uppercase text-xs tracking-widest">
-                Upload a file to see preview and sync button
-            </div>
           )}
+        </div>
 
-          {isDone && (
-            <div className="p-6 bg-emerald-50 border-2 border-emerald-100 text-emerald-700 rounded-3xl flex items-center justify-center gap-3 font-black">
-              <CheckCircle2 size={24}/> SUCCESS! VIEW DASHBOARD
+        {/* --- UI Upgrade: Formatting Guide with Excel Sample --- */}
+        <div className="mt-16 bg-blue-50/50 p-10 rounded-[3rem] border-2 border-blue-100 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-8 opacity-10 text-blue-600"><FileSpreadsheet size={100}/></div>
+            <h3 className="text-2xl font-black text-blue-900 mb-6 flex items-center gap-3">
+                <Info size={24} className="text-blue-500" /> Formatting Guide
+            </h3>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                <div>
+                    <p className="text-blue-800 font-bold mb-4 leading-relaxed">
+                        အပေါ်က Preview မှာ ဒေတာတွေ မှန်ကန်စွာ ပေါ်လာဖို့အတွက် သင့် Excel ဖိုင်ရဲ့ Column ခေါင်းစဉ်တွေကို အောက်ပါအတိုင်း ပေးထားရန် လိုအပ်ပါတယ်။
+                    </p>
+                    <ul className="space-y-3 text-sm font-bold text-blue-600/80 italic">
+                        <li className="flex gap-2"><span>•</span> <span><b>Date:</b> နေ့စွဲ (ဥပမာ - 04/15/2026)</span></li>
+                        <li className="flex gap-2"><span>•</span> <span><b>Description:</b> ဆိုင်နာမည် (ဥပမာ - Gas, Grocery)</span></li>
+                        <li className="flex gap-2"><span>•</span> <span><b>Amount:</b> အဝင်ငွေများကို (2000) နှင့် အသုံးစရိတ်များကို (-50) ဟု ရေးပါ။</span></li>
+                    </ul>
+                </div>
+
+                <div className="bg-white p-6 rounded-3xl shadow-inner border border-blue-100">
+                    <p className="text-[10px] font-black text-blue-300 uppercase mb-4 tracking-widest italic">Excel Sample Format</p>
+                    <table className="w-full text-[11px] font-bold">
+                        <thead>
+                            <tr className="bg-blue-50 text-blue-500 border-b border-blue-100">
+                                <th className="p-2 text-left">Date</th>
+                                <th className="p-2 text-left">Description</th>
+                                <th className="p-2 text-right">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody className="text-blue-900">
+                            <tr className="border-b border-blue-50"><td className="p-2">04/19/2026</td><td className="p-2">Gas</td><td className="p-2 text-right text-rose-500">-29.00</td></tr>
+                            <tr className="border-b border-blue-50"><td className="p-2">04/25/2026</td><td className="p-2">Grocery</td><td className="p-2 text-right text-rose-500">-200.00</td></tr>
+                            <tr><td className="p-2">04/25/2026</td><td className="p-2">Client Payment</td><td className="p-2 text-right text-emerald-600">2500.00</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
-          )}
         </div>
       </div>
     </Layout>

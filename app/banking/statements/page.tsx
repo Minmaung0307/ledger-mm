@@ -76,10 +76,13 @@ export default function BankStatements() {
   };
 
   const syncWithAI = async (statementId: string, fileUrl: string, account: string) => {
-    if (!confirm(`AI Sync to [${account}]?`)) return;
-    setIsSyncing(statementId);
+    const confirmSync = confirm(`AI will read this statement and sync to [${account}]. Proceed?`);
+    if (!confirmSync) return;
+
+    setIsSyncing(statementId); // Loading စတင်မယ်
+
     try {
-      // PDF ကို တိုက်ရိုက်မပို့တော့ဘဲ URL ကိုပဲ ပို့ပါမယ် (4.5MB limit ကျော်ဖို့)
+      // အရေးကြီးသည်- PDF ကို တိုက်ရိုက်မပို့တော့ဘဲ URL ကိုပဲ ပို့ပါမယ်
       const apiRes = await fetch('/api/extract-statement', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -87,18 +90,32 @@ export default function BankStatements() {
       });
 
       const result = await apiRes.json();
-      if (!apiRes.ok) throw new Error(result.error || "AI Sync Failed");
+      
+      if (!apiRes.ok) {
+        throw new Error(result.error || "AI Sync Failed");
+      }
 
+      // AI ဆီကရလာတဲ့ စာရင်းတွေကို Ledger (Firestore) ထဲ သွင်းမယ်
       for (const t of result) {
         await addDoc(collection(db, "transactions"), {
-          description: t.description, amount: Math.abs(t.amount),
+          description: t.description,
+          amount: Math.abs(t.amount), // အမြဲတမ်း အပေါင်းကိန်းနဲ့ သိမ်းမယ်
           category: t.amount > 0 ? 'income' : (t.category || 'other'),
-          transactionDate: new Date(t.date), date: serverTimestamp(),
-          uid: auth.currentUser?.uid, verified: true, bankAccount: account
+          transactionDate: new Date(t.date),
+          date: serverTimestamp(),
+          uid: auth.currentUser?.uid,
+          verified: true,
+          bankAccount: account
         });
       }
-      alert(`Synced ${result.length} items!`);
-    } catch (err: any) { alert(err.message); } finally { setIsSyncing(null); }
+
+      alert(`Successfully synced ${result.length} transactions to your ledger!`);
+    } catch (err: any) {
+      console.error(err);
+      alert("Error: " + err.message);
+    } finally {
+      setIsSyncing(null); // Loading ပိတ်မယ်
+    }
   };
 
   return (

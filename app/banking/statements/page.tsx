@@ -116,7 +116,7 @@ export default function BankStatements() {
 >
     {/* လက်ရှိနှစ်အလိုက် အလိုလို ထွက်လာမယ့် years list ကို သုံးပါမယ် */}
     {years.reverse().map(year => (
-        <option key={year} value={year}>{year} ARCHIVE</option>
+        <option key={year} value={year}>{year} eStmts</option>
     ))}
 </select>
                     <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-200 pointer-events-none" />

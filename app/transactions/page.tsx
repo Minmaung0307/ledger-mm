@@ -123,6 +123,7 @@ export default function TransactionsList() {
 
       setEditItem(null);
       alert("Updated successfully!");
+      window.location.reload();
     } catch (error) { alert("Error updating record"); }
   };
 

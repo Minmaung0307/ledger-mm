@@ -4,36 +4,26 @@ import { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import { db, auth, storage } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { collection, addDoc, query, where, onSnapshot, serverTimestamp, orderBy, getDocs } from 'firebase/firestore';
+import { collection, addDoc, query, where, onSnapshot, serverTimestamp, orderBy } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { UploadCloud, FileText, Download, Loader2, X, ChevronDown, ExternalLink, Sparkles } from 'lucide-react';
+import { UploadCloud, FileText, Download, Loader2, ChevronDown, ExternalLink, CheckCircle2, Files } from 'lucide-react';
 
 export default function BankStatements() {
   const [statements, setStatements] = useState<any[]>([]);
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]); // ဖိုင်အများကြီးအတွက် Array ပြောင်းလိုက်ပါတယ်
   const [accName, setAccName] = useState('');
-  const [period, setPeriod] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
-  // --- Features အတွက် State များ ---
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear()); // ၁။ Yearly Archive
-  const [accountHistory, setAccountHistory] = useState<string[]>([]); // ၂။ Smart Suggestion
-  const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-
-  // အခုကနေ စပြီး ခုနှစ်တွေကို အလိုလို တွက်ချက်ပေးမယ့် logic ပါ
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: currentYear - 2024 + 2 }, (_, i) => 2024 + i);
-  // ၂၀၂၄ ကနေ စပြီး လက်ရှိနှစ် + ၁ နှစ်အထိ အမြဲ ထုတ်ပေးနေမှာပါ
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // ၁။ နှစ်အလိုက် စစ်ထုတ်ခြင်း Logic
         const startOfYear = new Date(selectedYear, 0, 1);
         const endOfYear = new Date(selectedYear, 11, 31, 23, 59, 59);
-
         const q = query(
           collection(db, "bank_statements"), 
           where("uid", "==", user.uid), 
@@ -41,166 +31,138 @@ export default function BankStatements() {
           where("createdAt", "<=", endOfYear),
           orderBy("createdAt", "desc")
         );
-
         const unsubscribeData = onSnapshot(q, (snap) => {
           setStatements(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
           setLoading(false);
-        }, (err) => {
-          console.error("Index or Error:", err);
-          setLoading(false);
         });
-
-        // ၂။ Auto-complete အတွက် အကောင့်နာမည်များ ဆွဲထုတ်ခြင်း
-        const qHistory = query(collection(db, "bank_statements"), where("uid", "==", user.uid));
-        const historySnap = await getDocs(qHistory);
-        const names = historySnap.docs.map(doc => doc.data().accountName);
-        setAccountHistory(Array.from(new Set(names)));
-
         return () => unsubscribeData();
       }
     });
     return () => unsubscribeAuth();
   }, [selectedYear]);
 
-  const handleAccNameChange = (val: string) => {
-    setAccName(val);
-    if (val.length > 0) {
-      const filtered = accountHistory.filter(name => name.toLowerCase().includes(val.toLowerCase()));
-      setFilteredSuggestions(filtered);
-      setShowSuggestions(true);
-    } else {
-      setShowSuggestions(false);
-    }
-  };
-
-  const handleUpload = async (e: React.FormEvent) => {
+  // --- Bulk Upload Logic ---
+  const handleBulkUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     const user = auth.currentUser;
-    if (!file || !accName || isUploading || !user) return;
+    if (files.length === 0 || !accName || isUploading || !user) return;
     
     setIsUploading(true);
     try {
-      const storageRef = ref(storage, `statements/${user.uid}/${selectedYear}/${Date.now()}_${file.name}`);
-      await uploadBytes(storageRef, file);
-      const fileUrl = await getDownloadURL(storageRef);
+      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-      await addDoc(collection(db, "bank_statements"), {
-        accountName: accName,
-        period: period,
-        fileUrl: fileUrl,
-        fileName: file.name,
-        uid: user.uid,
-        createdAt: serverTimestamp()
-      });
+      for (const file of files) {
+        // ၁။ ပုံမှန်အတိုင်း Storage တင်မယ်
+        const storageRef = ref(storage, `statements/${user.uid}/${selectedYear}/${Date.now()}_${file.name}`);
+        await uploadBytes(storageRef, file);
+        const fileUrl = await getDownloadURL(storageRef);
 
-      setFile(null); setAccName(''); setPeriod('');
-      alert("Statement Saved Successfully!");
-    } catch (err) { alert("Upload failed"); }
-    finally { setIsUploading(false); }
+        // ၂။ Smart Filename Parsing (eStmt_2026-01-06.pdf ထဲမှ ရက်စွဲကို ဆွဲထုတ်ခြင်း)
+        // Regex သုံးပြီး 2026-01-06 ဆိုတဲ့ အပိုင်းကို ရှာမယ်
+        const dateMatch = file.name.match(/(\d{4})-(\d{2})-(\d{2})/);
+        let periodDisplay = "N/A";
+
+        if (dateMatch) {
+          const year = dateMatch[1]; // 2026
+          const monthIndex = parseInt(dateMatch[2]) - 1; // 01 -> 0 (Jan)
+          periodDisplay = `${monthNames[monthIndex]} ${year}`; // ရလဒ်: Jan 2026
+        } else {
+          // အကယ်၍ နာမည်ပုံစံမတူရင် ဖိုင်နာမည်ရဲ့ ပထမဆုံး စာသားကို ယူမယ်
+          periodDisplay = file.name.split(/[-_ ]/)[0];
+        }
+
+        // ၃။ Database ထဲ သိမ်းမယ်
+        await addDoc(collection(db, "bank_statements"), {
+          accountName: accName,
+          period: periodDisplay, // အခုဆိုရင် "Jan 2026" လို့ သိမ်းသွားပါပြီ
+          fileUrl: fileUrl,
+          fileName: file.name,
+          uid: user.uid,
+          createdAt: serverTimestamp()
+        });
+      }
+
+      setFiles([]); setAccName('');
+      alert(`Success! ${files.length} statements uploaded and categorized.`);
+    } catch (err) {
+      console.error(err);
+      alert("Upload failed.");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (
     <Layout>
-      <div className="pt-6 pb-40 max-w-5xl mx-auto px-4">
+      <div className="pt-6 pb-40 max-w-6xl mx-auto px-4">
         
-        {/* --- ၁။ Header with Year Selector --- */}
+        {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
             <div>
-                <h2 className="text-4xl font-black text-slate-900 tracking-tighter uppercase italic">Bank Statements</h2>
-                
-                <div className="mt-4 relative inline-block group">
-                    <select 
-    value={selectedYear}
-    onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-    className="appearance-none bg-emerald-600 text-white px-6 py-2.5 pr-10 rounded-2xl font-black text-sm outline-none cursor-pointer hover:bg-slate-900 transition-all shadow-xl"
->
-    {/* လက်ရှိနှစ်အလိုက် အလိုလို ထွက်လာမယ့် years list ကို သုံးပါမယ် */}
-    {years.reverse().map(year => (
-        <option key={year} value={year}>{year} eStmts</option>
-    ))}
-</select>
+                <h2 className="text-4xl font-black text-slate-900 tracking-tighter uppercase italic">eStatements Center</h2>
+                <div className="mt-4 relative inline-block">
+                    <select value={selectedYear} onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                        className="appearance-none bg-emerald-600 text-white px-6 py-2.5 pr-10 rounded-2xl font-black text-sm outline-none cursor-pointer shadow-xl"
+                    >
+                        {years.reverse().map(year => <option key={year} value={year}>{year} ARCHIVE</option>)}
+                    </select>
                     <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-200 pointer-events-none" />
                 </div>
             </div>
         </div>
 
-        {/* --- ၂။ Upload Form with Smart Suggestions --- */}
-        <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl border-2 border-slate-50 mb-12">
-          <form onSubmit={handleUpload} className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
-            <div className="relative">
-              <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block ml-2 flex items-center gap-2">
-                Account Name <Sparkles size={12} className="text-emerald-500"/>
-              </label>
-              <input 
-                type="text" value={accName} 
-                onChange={e => handleAccNameChange(e.target.value)}
-                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                placeholder="e.g. BoA Checking" 
-                className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-900 placeholder:text-slate-300 focus:border-emerald-500 focus:bg-white outline-none transition-all" required 
-              />
-              {/* Auto-complete List */}
-              {showSuggestions && filteredSuggestions.length > 0 && (
-                <div className="absolute z-50 w-full mt-2 bg-white border-2 border-slate-100 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-1">
-                  {filteredSuggestions.map((name, i) => (
-                    <button key={i} type="button" onClick={() => { setAccName(name); setShowSuggestions(false); }} className="w-full text-left p-4 hover:bg-emerald-50 font-black text-slate-700 border-b last:border-0 border-slate-50">
-                      {name}
-                    </button>
-                  ))}
+        {/* --- Bulk Upload Form --- */}
+        <div className="bg-white p-8 md:p-12 rounded-[3.5rem] shadow-2xl border-2 border-slate-50 mb-16 relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-8 opacity-5"><Files size={120}/></div>
+          
+          <h3 className="text-xl font-black text-slate-900 mb-6 uppercase tracking-tight">Bulk Upload statements</h3>
+          
+          <form onSubmit={handleBulkUpload} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-2">Bank / Account Name</label>
+                    <input type="text" value={accName} onChange={e => setAccName(e.target.value)} placeholder="e.g. Bank of America" className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-3xl font-black text-slate-900 focus:border-emerald-500 outline-none" required />
                 </div>
-              )}
+                
+                <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-2">Select Multiple Files (PDF/JPG)</label>
+                    <label className="w-full cursor-pointer bg-emerald-50 border-2 border-dashed border-emerald-200 p-5 rounded-3xl flex items-center justify-center gap-3 hover:bg-emerald-100 transition shadow-inner">
+                        <UploadCloud size={24} className="text-emerald-500" />
+                        <span className="font-black text-emerald-700 uppercase text-sm">
+                            {files.length > 0 ? `${files.length} Files Selected` : 'Click to select files'}
+                        </span>
+                        <input type="file" multiple accept=".pdf,.csv,.jpg,.png" onChange={e => setFiles(Array.from(e.target.files || []))} className="hidden" />
+                    </label>
+                </div>
             </div>
 
-            <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block ml-2">Period (Month/Year)</label>
-              <input 
-                type="text" value={period} onChange={e => setPeriod(e.target.value)} 
-                placeholder="e.g. April 2026" 
-                className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-900 placeholder:text-slate-300 focus:border-emerald-500 focus:bg-white outline-none transition-all" required 
-              />
-            </div>
-
-            <div>
-              <label className="w-full cursor-pointer bg-slate-50 border-2 border-dashed border-slate-200 p-4 rounded-2xl flex items-center justify-center gap-2 hover:border-emerald-400 transition shadow-inner">
-                <UploadCloud size={20} className="text-slate-400" />
-                <span className="text-xs font-black text-slate-500 uppercase truncate max-w-[120px]">{file ? file.name : 'Select File'}</span>
-                <input type="file" accept=".pdf,.csv,.jpg,.png" onChange={e => setFile(e.target.files?.[0] || null)} className="hidden" />
-              </label>
-            </div>
-
-            <button type="submit" disabled={isUploading} className="md:col-span-3 w-full bg-slate-900 text-white p-5 rounded-2xl font-black uppercase tracking-widest hover:bg-emerald-600 transition shadow-xl active:scale-95 disabled:bg-slate-300">
-              {isUploading ? <Loader2 className="animate-spin mx-auto" /> : "Secure Upload to Cloud Storage"}
+            <button type="submit" disabled={isUploading || files.length === 0} className="w-full bg-slate-900 text-white p-6 rounded-[2rem] font-black uppercase tracking-[0.2em] shadow-xl hover:bg-emerald-600 transition active:scale-95 disabled:bg-slate-100 disabled:text-slate-300">
+              {isUploading ? (
+                <span className="flex items-center justify-center gap-3"><Loader2 className="animate-spin" /> UPLOADING ALL STATEMENTS...</span>
+              ) : "START BULK CLOUD SYNC"}
             </button>
           </form>
         </div>
 
-        {/* --- ၃။ Statements List with "OPEN/VIEW" Capability --- */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* --- Statements List --- */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {loading ? (
-             <p className="p-10 text-center font-black animate-pulse text-slate-200 uppercase tracking-widest">Fetching {selectedYear} Documents...</p>
+             <p className="col-span-full p-20 text-center font-black animate-pulse text-slate-300">SYNCING DOCUMENTS...</p>
           ) : statements.length === 0 ? (
-            <div className="col-span-2 bg-white p-20 rounded-[3rem] border-4 border-dashed border-slate-100 text-center">
-                <FileText size={48} className="mx-auto text-slate-100 mb-4" />
-                <p className="text-slate-300 font-black italic uppercase">No records found for {selectedYear}</p>
-            </div>
+            <div className="col-span-full bg-white p-20 rounded-[3rem] border-4 border-dashed border-slate-100 text-center text-slate-300 font-black italic uppercase">No records found</div>
           ) : (
             statements.map(s => (
-              <div key={s.id} className="bg-white p-6 rounded-[2.5rem] border-2 border-slate-50 shadow-lg flex justify-between items-center group hover:border-emerald-500 transition-all">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 group-hover:bg-emerald-100 group-hover:text-emerald-600 transition border-2 border-slate-100"><FileText size={28}/></div>
-                  <div>
-                    <p className="font-black text-slate-900 text-lg tracking-tight">{s.accountName}</p>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{s.period}</p>
-                  </div>
+              <div key={s.id} className="bg-white p-6 rounded-[2.5rem] border-2 border-slate-50 shadow-lg flex flex-col justify-between group hover:border-emerald-500 transition-all h-48">
+                <div className="flex items-start justify-between">
+                    <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition shadow-inner"><FileText size={24}/></div>
+                    <a href={s.fileUrl} target="_blank" rel="noreferrer" className="p-3 bg-slate-100 text-slate-400 rounded-2xl hover:bg-slate-900 hover:text-white transition"><ExternalLink size={18}/></a>
                 </div>
-                {/* PDF ဖွင့်ကြည့်ရန် ခလုတ်အသစ် */}
-                <a 
-                  href={s.fileUrl} 
-                  target="_blank" 
-                  rel="noreferrer" 
-                  className="flex items-center gap-2 bg-slate-900 text-white px-6 py-3 rounded-xl font-black text-[10px] shadow-lg hover:bg-emerald-600 transition-all uppercase tracking-tighter"
-                >
-                  View File <ExternalLink size={14}/>
-                </a>
+                <div>
+                    <p className="font-black text-slate-900 text-lg leading-tight truncate pr-4">{s.accountName}</p>
+                    <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mt-1 flex items-center gap-2">
+                        <CheckCircle2 size={12}/> {s.period}
+                    </p>
+                </div>
               </div>
             ))
           )}

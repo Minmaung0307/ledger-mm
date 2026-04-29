@@ -4,12 +4,18 @@
 :root {
   --base-font-size: 16px;
   --bg-color: #F8FAFC;
+  --bg-app: #F8FAFC;
+  --bg-card: #ffffff;
   --text-color: #0f172a;
   --text-primary: #0f172a;
   --text-secondary: #64748b;
   --card-bg: #ffffff;
   --input-bg: #f1f5f9;
   --border-color: #e2e8f0;
+  --bg-input: #f1f5f9;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --border-main: #e2e8f0;
 }
 
 /* ၂။ Dark Mode Variables (Manual Override) */
@@ -21,6 +27,12 @@
   --card-bg: #1e293b;
   --input-bg: #0f172a;
   --border-color: #334155;
+  --bg-app: #0f172a;
+  --bg-card: #1e293b;
+  --bg-input: #0a0a0a;
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --border-main: #334155;
 }
 
 /* ၃။ Font Size Scaling */
@@ -31,19 +43,19 @@
 /* ၄။ တစ် App လုံးကို အကျိုးသက်ရောက်စေခြင်း */
 html {
   font-size: var(--base-font-size);
-  background-color: var(--bg-color);
-  color: var(--text-primary);
+  background-color: var(--bg-app);
+  color: var(--text-main);
   transition: background-color 0.3s ease;
 }
 
 body {
-  background-color: var(--bg-color);
+  background-color: var(--bg-app);
 }
 
 /* Dark Mode မှာ ရှိပြီးသား Tailwind white class တွေကို အတင်းပြောင်းခိုင်းခြင်း */
 .dark .bg-white {
-  background-color: var(--card-bg) !important;
-  color: var(--text-color) !important;
+  background-color: var(--bg-card) !important;
+  color: var(--text-main) !important;
   border-color: var(--border-color) !important;
 }
 
@@ -70,3 +82,19 @@ body {
 .dark .shadow-xl, .dark .shadow-2xl { 
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5) !important; 
 }
+
+/* Hover လုပ်တဲ့အခါ စာလုံးပျောက်တာကို ကာကွယ်ခြင်း */
+.dark .hover\:bg-slate-50:hover, 
+.dark .hover\:bg-slate-100:hover {
+  background-color: #334155 !important; /* slate-700 */
+}
+
+/* Input boxes fix */
+.dark input, .dark textarea, .dark select {
+  background-color: var(--bg-input) !important;
+  color: #ffffff !important;
+  border-color: var(--border-main) !important;
+}
+
+/* Excel Table fix in Dark Mode */
+.dark .bg-white\/60 { background-color: rgba(30, 41, 59, 0.8) !important; }

@@ -106,7 +106,7 @@ export default function Settings() {
             {/* Business Name */}
             <div>
               <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3 ml-2">Company Name</label>
-              <input type="text" value={businessName} onChange={(e) => setBusinessName(e.target.value)} className="w-full p-5 bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-700 rounded-3xl font-black text-slate-900 dark:text-white focus:border-emerald-500 outline-none transition-all" placeholder="Your Business Name" />
+              <input type="text" value={businessName} onChange={(e) => setBusinessName(e.target.value)} className="w-full p-5 bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-700 rounded-3xl font-black text-slate-900 dark:text-white focus:border-emerald-500 outline-none transition-all text-lg" placeholder="Your Business Name" />
             </div>
 
             {/* Accountant Email (ခေါင်းစဉ်လေး တပ်ပေးထားပါတယ်) */}
@@ -114,7 +114,7 @@ export default function Settings() {
               <label className="block text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em] mb-3 ml-2 flex items-center gap-2">
                 <ShieldCheck size={14}/> Accountant Email (Read-Only Access)
               </label>
-              <input type="email" value={accountantEmail} onChange={e => setAccountantEmail(e.target.value)} className="w-full p-5 bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-700 rounded-3xl font-black text-slate-900 dark:text-white focus:border-emerald-500 outline-none transition-all" placeholder="accountant@email.com" />
+              <input type="email" value={accountantEmail} onChange={e => setAccountantEmail(e.target.value)} className="w-full p-5 bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-700 rounded-3xl font-black text-slate-900 dark:text-white focus:border-emerald-500 outline-none transition-all text-lg" placeholder="accountant@email.com" />
             </div>
 
             {/* Address */}
@@ -127,11 +127,11 @@ export default function Settings() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100 dark:border-slate-700">
               <div>
                 <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3 ml-2">Tax Preparer Name</label>
-                <input type="text" value={preparerName} onChange={(e) => setPreparerName(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-bold text-slate-900 dark:text-white focus:border-emerald-500 outline-none" placeholder="Full Name" />
+                <input type="text" value={preparerName} onChange={(e) => setPreparerName(e.target.value)} className="w-full p-5 bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-700 rounded-3xl font-black text-slate-900 dark:text-white focus:border-emerald-500 outline-none transition-all text-lg" placeholder="Full Name" />
               </div>
               <div>
                 <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3 ml-2">PTIN / EIN</label>
-                <input type="text" value={ptin} onChange={(e) => setPtin(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-bold text-slate-900 dark:text-white focus:border-emerald-500 outline-none" placeholder="Tax ID" />
+                <input type="text" value={ptin} onChange={(e) => setPtin(e.target.value)} className="w-full p-5 bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-700 rounded-3xl font-black text-slate-900 dark:text-white focus:border-emerald-500 outline-none transition-all text-lg" placeholder="Tax ID" />
               </div>
             </div>
 

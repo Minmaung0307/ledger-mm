@@ -241,7 +241,11 @@ export default function TransactionsList() {
                 {selectedIds.length === filtered.length ? "DESELECT ALL" : "SELECT ALL"}
              </button>
              
-             <button onClick={() => setShowOnlyReceipts(!showOnlyReceipts)} className={`px-5 py-3 rounded-2xl font-black text-[10px] flex items-center gap-2 transition shadow-md ${showOnlyReceipts ? 'bg-emerald-600 text-white' : 'bg-white text-slate-500 border-2'}`}>
+             <button onClick={() => setShowOnlyReceipts(!showOnlyReceipts)} className={`px-5 py-3 rounded-2xl font-black text-[10px] flex items-center gap-2 transition shadow-md ${
+                showOnlyReceipts 
+                  ? 'bg-emerald-600 text-white shadow-emerald-500/20' 
+                  : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-2 border-slate-100 dark:border-slate-700'
+              }`}>
                 <Filter size={14} /> {showOnlyReceipts ? "RECEIPTS ONLY" : "ALL RECORDS"}
              </button>
              <button onClick={exportToCSV} className="bg-slate-900 text-white px-6 py-3 rounded-2xl font-black text-[10px] shadow-xl flex items-center gap-2">
@@ -280,7 +284,10 @@ export default function TransactionsList() {
                 const isSelected = selectedIds.includes(item.id);
 
                 return (
-                  <div key={item.id} className={`p-4 md:px-8 md:py-3 flex justify-between items-center hover:bg-slate-50/50 transition relative ${isSelected ? 'bg-emerald-50/40' : hasDuplicate ? 'bg-amber-50/20' : ''}`}>
+                  <div key={item.id} className={`p-4 md:px-8 md:py-3 flex justify-between items-center transition relative 
+                  hover:bg-slate-50 dark:hover:bg-slate-800/50 
+                  ${isSelected ? 'bg-emerald-50 dark:bg-emerald-900/30' : 
+                    hasDuplicate ? 'bg-amber-50/20 dark:bg-amber-900/20' : ''}`}>
                     {hasDuplicate && (
                       <div className="absolute top-0.5 left-1/2 -translate-x-1/2 bg-white border border-amber-200 text-amber-600 px-3 py-0.5 rounded-full font-black text-[7px] flex items-center gap-1 z-10">
                         <AlertTriangle size={8} /> DUPLICATE FOUND <button onClick={() => setDismissedAlerts([...dismissedAlerts, item.id])} className="ml-1 border-l pl-1 font-bold">DISMISS</button>

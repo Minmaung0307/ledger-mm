@@ -388,7 +388,11 @@ export default function Dashboard() {
                       <CheckCircle2 size={16} className="text-emerald-500" />
                     </span>
                   )}
-                  <p className={`text-xl md:text-2xl font-black tracking-tighter ${item.category === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                  <p className={`text-xl md:text-2xl font-black tracking-tighter ${
+                      item.category === 'income' 
+                        ? 'text-emerald-600 dark:text-emerald-400' 
+                        : 'text-rose-600 dark:text-rose-400'
+                    }`}>
                     {item.category === 'income' ? '+' : '-'}${Number(item.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}
                   </p>
                 </div>

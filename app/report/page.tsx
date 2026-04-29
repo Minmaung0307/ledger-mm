@@ -284,7 +284,7 @@ export default function ProfitLossReport() {
             value={taxNote}
             onChange={(e) => setTaxNote(e.target.value)}
             placeholder={`${selectedYear} ခုနှစ် အခွန်ဆောင်ရမည့် အစီအစဉ်များ၊ သတိထားရမည့်အချက်များကို ဒီမှာ ရေးမှတ်ထားနိုင်ပါသည်...`}
-            className="w-full h-40 p-6 bg-slate-50 border-2 border-slate-100 rounded-[2rem] font-bold text-slate-700 focus:border-amber-400 focus:bg-white outline-none transition-all resize-none"
+            className="w-full h-40 p-6 bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-700 rounded-[2rem] font-bold text-slate-700 dark:text-white focus:border-amber-400 outline-none transition-all resize-none"
           />
 
           <div className="mt-4 flex justify-end">

@@ -47,3 +47,28 @@ body {
 body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
+
+html {
+  font-size: var(--base-font-size);
+}
+
+/* Dark Mode Transitions */
+body {
+  @apply transition-colors duration-300;
+}
+
+/* Dark Mode သွင်းလိုက်တဲ့အခါ မူလ Background တွေကို override လုပ်ဖို့ */
+.dark body {
+  background-color: #0f172a; /* slate-900 */
+}
+
+/* Sidebar နဲ့ Card တွေအတွက် Dark Mode အရောင်အသေ သတ်မှတ်ခြင်း */
+.dark .bg-white {
+  background-color: #1e293b !important; /* slate-800 */
+  color: #f8fafc !important;
+  border-color: #334155 !important;
+}
+
+.dark .text-slate-900 { color: #f8fafc !important; }
+.dark .text-slate-400 { color: #94a3b8 !important; }
+.dark .bg-slate-50 { background-color: #0f172a !important; }

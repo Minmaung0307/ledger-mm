@@ -88,13 +88,30 @@ export default function TransactionsList() {
 
   const handleBulkVerify = async () => {
     if (selectedIds.length === 0) return;
+
+    // ၁။ မျက်နှာပြင်ပေါ်က စာရင်းတွေကို ချက်ချင်း အစိမ်းရောင် အမှန်ခြစ် ပြောင်းခိုင်းမယ်
+    // ဒါမှ လူကြီးမင်း နှိပ်လိုက်တာနဲ့ UI က ချက်ချင်း တုံ့ပြန်မှာပါ
+    setTransactions(prev => prev.map(item => 
+      selectedIds.includes(item.id) ? { ...item, verified: true } : item
+    ));
+
     const batch = writeBatch(db);
-    selectedIds.forEach(id => {
-      batch.update(doc(db, "transactions", id), { verified: true });
-    });
-    await batch.commit();
-    setSelectedIds([]);
-    alert(`Verified ${selectedIds.length} records!`);
+      selectedIds.forEach(id => {
+        batch.update(doc(db, "transactions", id), { verified: true });
+      });
+
+      try {
+        // ၂။ ဒေတာဘေ့စ်မှာ တကယ်သွားပြင်မယ်
+        await batch.commit();
+        const count = selectedIds.length;
+        setSelectedIds([]); // Selection တွေကို ပြန်ဖြုတ်မယ်
+        alert(`Verified ${count} records successfully!`);
+      } catch (error) {
+        // အကယ်၍ အမှားတက်ခဲ့ရင် အမှန်အတိုင်း ပြန်ဖြစ်သွားအောင် စာမျက်နှာကို refresh လုပ်မယ်
+        console.error("Bulk Verify Error:", error);
+        window.location.reload();
+        alert("Error: Some records could not be verified.");
+      }
   };
 
   const handleBulkDelete = async () => {

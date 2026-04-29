@@ -30,7 +30,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
     try {
-      await signInWithPopup(auth, provider);
+      // await signInWithPopup(auth, provider);
+      await signInWithRedirect(auth, provider);
     } catch (error: any) {
       if (error.code === 'auth/popup-blocked') {
           await signInWithRedirect(auth, provider);

@@ -73,7 +73,7 @@ body {
 /* --- Global Fixes --- */
 .dark .bg-white { background-color: var(--card-bg) !important; color: var(--text-primary) !important; }
 .dark .bg-slate-50 { background-color: var(--input-bg) !important; }
-.dark .text-slate-900 { color: var(--text-primary) !important; }
+.dark .text-slate-900 { color: var(--text-primary) !important; background-color: gray;}
 .dark .text-slate-400, .dark .text-slate-500 { color: var(--text-secondary) !important; }
 .dark .border-slate-100 { border-color: var(--border-color) !important; }
 

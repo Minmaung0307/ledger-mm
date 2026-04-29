@@ -5,33 +5,28 @@ import {
   LayoutDashboard, Receipt, ShoppingCart, 
   Users, Landmark, FileBarChart, Settings, LogOut, 
   List, ImageIcon, FileText, Menu, X, ChevronRight, 
-  ExternalLink, UploadCloud
+  ExternalLink, UploadCloud, ShieldCheck
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { auth } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import { onAuthStateChanged, signOut, signInWithPopup, signInWithRedirect, GoogleAuthProvider } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<any>(null);
+  const [appSettings, setAppSettings] = useState({ theme: 'light', fontSize: 'medium' }); 
   const pathname = usePathname();
   const [isLoading, setIsLoading] = useState(true);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // Mobile Menu State
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAccountant, setIsAccountant] = useState(false);
 
-  {isAccountant && (
-    <div className="bg-amber-500 text-white text-center py-2 font-black text-[10px] uppercase tracking-widest sticky top-0 z-50">
-      Accountant View Only - Read Only Mode Active
-    </div>
-  )}
-
-  // Login Logic (ရှိပြီးသားအတိုင်း)
+  // Login/Logout Logic
   const login = async () => {
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
     try {
       await signInWithPopup(auth, provider);
-      // await signInWithRedirect(auth, provider);
     } catch (error: any) {
       if (error.code === 'auth/popup-blocked') {
           await signInWithRedirect(auth, provider);
@@ -47,8 +42,23 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
+    const unsubscribe = onAuthStateChanged(auth, async (u) => {
       setUser(u);
+      if (u) {
+        // Profile & Settings ဆွဲယူခြင်း
+        const docSnap = await getDoc(doc(db, "profiles", u.uid));
+        if (docSnap.exists()) {
+          const profileData = docSnap.data();
+          setAppSettings({
+            theme: profileData.theme || 'light',
+            fontSize: profileData.fontSize || 'medium'
+          });
+          // Accountant စစ်ဆေးခြင်း
+          if (profileData.accountantEmail === u.email) {
+            setIsAccountant(true);
+          }
+        }
+      }
       setTimeout(() => setIsLoading(false), 800);
     });
     return () => unsubscribe();
@@ -91,8 +101,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   ];
 
   if (isLoading) return (
-    <div className="h-screen w-full flex flex-col items-center justify-center bg-white">
-      <div className="w-16 h-16 bg-emerald-600 rounded-[2rem] animate-bounce shadow-2xl shadow-emerald-200"></div>
+    <div className="h-screen w-full flex flex-col items-center justify-center bg-white dark:bg-slate-900 transition-colors duration-300">
+      <div className="w-16 h-16 bg-emerald-600 rounded-[2rem] animate-bounce shadow-2xl"></div>
       <p className="mt-6 italic font-black text-emerald-600 uppercase tracking-widest text-xs">Simple Ledger Pro...</p>
     </div>
   );
@@ -116,91 +126,97 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col md:flex-row font-sans">
-      
-      {/* --- Sidebar - Desktop --- */}
-      <aside className="hidden md:flex w-72 bg-white border-r border-slate-200 flex-col p-8 fixed h-full z-20 overflow-y-auto scrollbar-hide">
-        <div className="flex items-center gap-3 mb-10 px-2">
-            <div className="w-10 h-10 bg-emerald-600 rounded-2xl flex items-center justify-center font-black text-white italic shadow-lg">SL</div>
-            <h1 className="text-xl font-black text-slate-900 tracking-tighter uppercase italic">SimpleLedger</h1>
-        </div>
-
-        <nav className="space-y-6">
-          {navGroups.map((group) => (
-            <div key={group.group}>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 px-4 italic">{group.group}</p>
-              <div className="space-y-1">
-                {group.items.map((item) => {
-                  const isActive = pathname === item.href;
-                  return (
-                    <Link key={item.label} href={item.href} className={`flex items-center gap-4 py-2.5 px-4 rounded-xl font-bold transition-all ${isActive ? 'bg-emerald-600 text-white shadow-xl shadow-emerald-100' : 'text-slate-500 hover:bg-slate-50'}`}>
-                      {item.icon} <span className="text-sm">{item.label}</span>
-                    </Link>
-                  );
-                })}
-              </div>
+    // Wrapper div for Dark Mode and Font Size Scaling
+    <div className={`${appSettings.theme === 'dark' ? 'dark' : ''} text-scale-${appSettings.fontSize} min-h-screen transition-colors duration-300`}>
+      <div className="bg-[#F8FAFC] dark:bg-slate-900 text-slate-900 dark:text-slate-100 min-h-screen flex flex-col md:flex-row relative">
+        
+        {/* --- Accountant View Alert (Integrated properly) --- */}
+        {isAccountant && (
+            <div className="fixed top-0 left-0 right-0 z-[100] bg-amber-500 text-white text-center py-2 font-black text-[10px] uppercase tracking-widest no-print flex items-center justify-center gap-2">
+                <ShieldCheck size={14}/> Accountant View Only - Read Only Mode Active
             </div>
-          ))}
+        )}
+
+        {/* --- Sidebar - Desktop --- */}
+        <aside className="hidden md:flex w-72 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex-col p-8 fixed h-full z-20 overflow-y-auto scrollbar-hide">
+            <div className="flex items-center gap-3 mb-10 px-2 mt-4">
+                <div className="w-10 h-10 bg-emerald-600 rounded-2xl flex items-center justify-center font-black text-white italic shadow-lg">SL</div>
+                <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">SimpleLedger</h1>
+            </div>
+
+            <nav className="space-y-6">
+            {navGroups.map((group) => (
+                <div key={group.group}>
+                <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-2 px-4 italic">{group.group}</p>
+                <div className="space-y-1">
+                    {group.items.map((item) => {
+                    const isActive = pathname === item.href;
+                    return (
+                        <Link key={item.label} href={item.href} className={`flex items-center gap-4 py-2.5 px-4 rounded-xl font-bold transition-all ${isActive ? 'bg-emerald-600 text-white shadow-xl shadow-emerald-100' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white'}`}>
+                        {item.icon} <span className="text-sm">{item.label}</span>
+                        </Link>
+                    );
+                    })}
+                </div>
+                </div>
+            ))}
+            </nav>
+
+            <div className="mt-auto pt-6 border-t border-slate-100 dark:border-slate-700">
+                <div className="flex items-center gap-3 px-2 mb-6 bg-slate-50 dark:bg-slate-900/50 p-3 rounded-2xl border border-slate-100 dark:border-slate-700">
+                    <img src={user.photoURL} className="w-10 h-10 rounded-xl border-2 border-white dark:border-slate-800 shadow-sm" alt="p" />
+                    <div className="overflow-hidden">
+                        <p className="text-sm font-black text-slate-900 dark:text-white truncate">{user.displayName}</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Business Owner</p>
+                    </div>
+                </div>
+                <Link href="/settings" className={`flex items-center gap-4 p-4 rounded-2xl font-bold mb-2 transition-all ${pathname === '/settings' ? 'bg-slate-900 dark:bg-white dark:text-slate-900 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}><Settings size={20}/> Settings</Link>
+                <button onClick={logout} className="flex items-center gap-4 p-4 w-full text-rose-500 font-black hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-2xl transition active:scale-95 group"><LogOut size={20} className="group-hover:-translate-x-1 transition-transform" /> Logout</button>
+            </div>
+        </aside>
+
+        {/* --- Main Content --- */}
+        <main className={`flex-1 md:ml-72 p-6 md:p-12 mb-32 md:mb-0 ${isAccountant ? 'mt-8' : ''}`}>
+            <div className="max-w-6xl mx-auto">{children}</div>
+        </main>
+
+        {/* --- Mobile Bottom Nav --- */}
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl border-t border-slate-100 dark:border-slate-700 flex justify-around p-4 pb-10 z-40 shadow-2xl rounded-t-[2.5rem]">
+            <Link href="/" className={`flex flex-col items-center gap-1 ${pathname === '/' ? 'text-emerald-600 scale-110' : 'text-slate-500 font-bold'}`}><LayoutDashboard size={24} /><span className="text-[9px] font-black uppercase tracking-tighter">Home</span></Link>
+            <Link href="/invoices" className={`flex flex-col items-center gap-1 ${pathname === '/invoices' ? 'text-emerald-600 scale-110' : 'text-slate-500 font-bold'}`}><Receipt size={24} /><span className="text-[9px] font-black uppercase tracking-tighter">Sales</span></Link>
+            <Link href="/transactions" className={`flex flex-col items-center gap-1 ${pathname === '/transactions' ? 'text-emerald-600 scale-110' : 'text-slate-500 font-bold'}`}><ShoppingCart size={24} /><span className="text-[9px] font-black uppercase tracking-tighter">Bills</span></Link>
+            <Link href="/report" className={`flex flex-col items-center gap-1 ${pathname === '/report' ? 'text-emerald-600 scale-110' : 'text-slate-500 font-bold'}`}><FileBarChart size={24} /><span className="text-[9px] font-black uppercase tracking-tighter">Tax</span></Link>
+            <button onClick={() => setIsMobileMenuOpen(true)} className="flex flex-col items-center gap-1 text-slate-500 font-bold active:text-emerald-600"><Menu size={24} /><span className="text-[9px] font-black uppercase tracking-tighter">More</span></button>
         </nav>
 
-        <div className="mt-auto pt-6 border-t border-slate-100">
-          <div className="flex items-center gap-3 px-2 mb-6 bg-slate-50 p-3 rounded-2xl border border-slate-100">
-              <img src={user.photoURL} className="w-10 h-10 rounded-xl border-2 border-white shadow-sm" alt="p" />
-              <div className="overflow-hidden">
-                  <p className="text-sm font-black text-slate-900 truncate">{user.displayName}</p>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Business Owner</p>
-              </div>
-          </div>
-          <Link href="/settings" className={`flex items-center gap-4 p-4 rounded-2xl font-bold mb-2 transition-all ${pathname === '/settings' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}><Settings size={20}/> Settings</Link>
-          <button onClick={logout} className="flex items-center gap-4 p-4 w-full text-rose-500 font-black hover:bg-rose-50 rounded-2xl transition-all active:scale-95 group"><LogOut size={20} className="group-hover:-translate-x-1 transition-transform" /> Logout</button>
-        </div>
-      </aside>
-
-      {/* --- Main Content --- */}
-      <main className="flex-1 md:ml-72 p-6 md:p-12 mb-32 md:mb-0">
-        <div className="max-w-6xl mx-auto">{children}</div>
-      </main>
-
-      {/* --- Mobile Bottom Nav (Higher Contrast & Proper Icons) --- */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-slate-100 flex justify-around p-4 pb-10 z-40 shadow-[0_-10px_50px_rgba(0,0,0,0.05)] rounded-t-[2.5rem]">
-        <Link href="/" className={`flex flex-col items-center gap-1 ${pathname === '/' ? 'text-emerald-600 scale-110' : 'text-slate-500 font-bold'}`}><LayoutDashboard size={24} /><span className="text-[9px] font-black uppercase tracking-tighter">Home</span></Link>
-        <Link href="/invoices" className={`flex flex-col items-center gap-1 ${pathname === '/invoices' ? 'text-emerald-600 scale-110' : 'text-slate-500 font-bold'}`}><Receipt size={24} /><span className="text-[9px] font-black uppercase tracking-tighter">Sales</span></Link>
-        <Link href="/transactions" className={`flex flex-col items-center gap-1 ${pathname === '/transactions' ? 'text-emerald-600 scale-110' : 'text-slate-500 font-bold'}`}><ShoppingCart size={24} /><span className="text-[9px] font-black uppercase tracking-tighter">Bills</span></Link>
-        <Link href="/report" className={`flex flex-col items-center gap-1 ${pathname === '/report' ? 'text-emerald-600 scale-110' : 'text-slate-500 font-bold'}`}><FileBarChart size={24} /><span className="text-[9px] font-black uppercase tracking-tighter">Tax</span></Link>
-        <button onClick={() => setIsMobileMenuOpen(true)} className="flex flex-col items-center gap-1 text-slate-500 font-bold active:text-emerald-600"><Menu size={24} /><span className="text-[9px] font-black uppercase tracking-tighter">More</span></button>
-      </nav>
-
-      {/* --- Mobile More Menu Drawer (Smooth & All Items) --- */}
-      {isMobileMenuOpen && (
-        <div className="md:hidden fixed inset-0 z-50 flex justify-end">
-            <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in" onClick={() => setIsMobileMenuOpen(false)}></div>
-            <div className="relative w-[85%] bg-white h-full shadow-2xl p-8 flex flex-col animate-in slide-in-from-right duration-300 rounded-l-[3rem]">
-                <div className="flex justify-between items-center mb-10">
-                    <h2 className="text-2xl font-black text-slate-900 italic">Full Menu</h2>
-                    <button onClick={() => setIsMobileMenuOpen(false)} className="p-3 bg-slate-50 rounded-2xl text-slate-400 active:text-rose-500"><X size={24}/></button>
-                </div>
-                <div className="flex-1 overflow-y-auto space-y-8 pr-2">
-                    {navGroups.map(group => (
-                        <div key={group.group}>
-                            <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-4 italic px-2">{group.group}</p>
-                            <div className="space-y-3">
-                                {group.items.map(item => (
-                                    <Link key={item.label} href={item.href} onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center justify-between p-4 rounded-2xl font-black transition-all ${pathname === item.href ? 'bg-emerald-600 text-white shadow-lg' : 'bg-slate-50 text-slate-600 active:bg-slate-100'}`}>
-                                        <div className="flex items-center gap-4">{item.icon} <span className="text-sm">{item.label}</span></div>
-                                        <ChevronRight size={14} className="opacity-30" />
-                                    </Link>
-                                ))}
+        {/* --- Mobile Menu Drawer --- */}
+        {isMobileMenuOpen && (
+            <div className="md:hidden fixed inset-0 z-[110] flex justify-end">
+                <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in" onClick={() => setIsMobileMenuOpen(false)}></div>
+                <div className="relative w-[85%] bg-white dark:bg-slate-800 h-full shadow-2xl p-8 flex flex-col animate-in slide-in-from-right duration-300 rounded-l-[3rem]">
+                    <div className="flex justify-between items-center mb-10">
+                        <h2 className="text-2xl font-black text-slate-900 dark:text-white italic">Full Menu</h2>
+                        <button onClick={() => setIsMobileMenuOpen(false)} className="p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl text-slate-400 active:text-rose-500"><X size={24}/></button>
+                    </div>
+                    <div className="flex-1 overflow-y-auto space-y-8 pr-2">
+                        {navGroups.map(group => (
+                            <div key={group.group}>
+                                <p className="text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-widest mb-4 italic px-2">{group.group}</p>
+                                <div className="space-y-3">
+                                    {group.items.map(item => (
+                                        <Link key={item.label} href={item.href} onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center justify-between p-4 rounded-2xl font-black transition-all ${pathname === item.href ? 'bg-emerald-600 text-white shadow-lg' : 'bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-400 active:bg-slate-100'}`}>
+                                            <div className="flex items-center gap-4">{item.icon} <span className="text-sm">{item.label}</span></div>
+                                            <ChevronRight size={14} className="opacity-30" />
+                                        </Link>
+                                    ))}
+                                </div>
                             </div>
-                        </div>
-                    ))}
-                    <div className="pt-6 border-t border-slate-100 space-y-3">
-                        <Link href="/settings" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 p-4 rounded-2xl font-black bg-slate-900 text-white shadow-lg"><Settings size={20}/> Business Settings</Link>
-                        <button onClick={logout} className="flex items-center gap-4 p-4 w-full text-rose-500 font-black bg-rose-50 rounded-2xl transition active:scale-95"><LogOut size={20}/> Logout</button>
+                        ))}
                     </div>
                 </div>
             </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

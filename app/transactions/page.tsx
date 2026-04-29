@@ -87,9 +87,23 @@ export default function TransactionsList() {
   };
 
   const toggleVerify = async (id: string, currentStatus: boolean) => {
+    // ၁။ မျက်နှာပြင်ပေါ်က စာရင်း (Local State) ကို အရင်ဆုံး ချက်ချင်း ပြောင်းလိုက်မယ်
+    // ဒါမှ လူကြီးမင်း နှိပ်လိုက်တာနဲ့ အစိမ်းရောင်လေး ချက်ချင်း ပေါ်လာမှာပါ
+    setTransactions(prev => prev.map(item => 
+      item.id === id ? { ...item, verified: !currentStatus } : item
+    ));
+
     try {
-      await updateDoc(doc(db, "transactions", id), { verified: !currentStatus });
-    } catch (error) { alert("Error updating status"); }
+      // ၂။ ပြီးမှ Database (Firebase) မှာ သွားပြီး အတည်ပြုမယ်
+      const docRef = doc(db, "transactions", id);
+      await updateDoc(docRef, { verified: !currentStatus });
+    } catch (error) {
+    // တကယ်လို့ အင်တာနက်မကောင်းလို့ Database မှာ ပြင်မရခဲ့ရင် 
+    // အမှန်ခြစ်ကို မူလအတိုင်း ပြန်ဖြုတ်လိုက်မယ် (Rollback)
+    setTransactions(prev => prev.map(item => 
+      item.id === id ? { ...item, verified: currentStatus } : item
+    ));
+    alert("Error: Could not sync with bank record."); }
   };
 
   const handleDelete = async (id: string) => {

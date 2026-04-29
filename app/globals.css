@@ -98,3 +98,6 @@ body {
 
 /* Excel Table fix in Dark Mode */
 .dark .bg-white\/60 { background-color: rgba(30, 41, 59, 0.8) !important; }
+
+.dark .text-blue-900 { color: #dbeafe !important; } /* Excel table စာသား မြင်ရအောင် */
+.dark .bg-blue-50 { background-color: #1e293b !important; color: #f8fafc !important; } /* Guide box မြင်ရအောင် */

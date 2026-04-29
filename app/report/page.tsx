@@ -422,7 +422,7 @@ export default function ProfitLossReport() {
               { n: 7, title: "Final Review & E-File", text: "အချက်အလက်များ စစ်ဆေးပြီး E-file ကို နှိပ်ပါ။ ဂုဏ်ယူပါသည်၊ အခွန်ဆောင်ခြင်း အောင်မြင်သွားပါပြီ!", special: true }
             ].map((step) => (
               <div key={step.n} className={`${step.special ? 'bg-emerald-600 text-white shadow-2xl scale-[1.02]' : 'bg-white border-2 border-slate-50 shadow-xl'} p-8 rounded-[2.5rem] flex gap-6 group transition-all`}>
-                <div className={`w-16 h-16 ${step.special ? 'bg-white/20' : 'bg-slate-100 group-hover:bg-emerald-600 group-hover:text-white'} rounded-full flex-shrink-0 flex items-center justify-center font-black text-2xl transition`}>
+                <div className={`w-16 h-16 ${step.special ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-900 group-hover:bg-emerald-600 group-hover:text-white'} rounded-full flex-shrink-0 flex items-center justify-center font-black text-2xl transition`}>
                   {step.n}
                 </div>
                 <div>

@@ -196,20 +196,26 @@ export default function CSVImport() {
                     </ul>
                 </div>
 
-                <div className="bg-white p-6 rounded-3xl shadow-inner border border-blue-100">
+                <div className="bg-white/60 dark:bg-slate-800/60 p-4 rounded-2xl border border-blue-200 dark:border-blue-900/30 shadow-inner max-w-md">
                     <p className="text-[10px] font-black text-blue-300 uppercase mb-4 tracking-widest italic">Excel Sample Format</p>
-                    <table className="w-full text-[11px] font-bold">
-                        <thead>
-                            <tr className="bg-blue-50 text-blue-500 border-b border-blue-100">
-                                <th className="p-2 text-left">Date</th>
-                                <th className="p-2 text-left">Description</th>
-                                <th className="p-2 text-right">Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody className="text-blue-900">
-                            <tr className="border-b border-blue-50"><td className="p-2">04/19/2026</td><td className="p-2">Gas</td><td className="p-2 text-right text-rose-500">-29.00</td></tr>
-                            <tr className="border-b border-blue-50"><td className="p-2">04/25/2026</td><td className="p-2">Grocery</td><td className="p-2 text-right text-rose-500">-200.00</td></tr>
-                            <tr><td className="p-2">04/25/2026</td><td className="p-2">Client Payment</td><td className="p-2 text-right text-emerald-600">2500.00</td></tr>
+                    <table className="w-full text-[10px] font-black uppercase text-blue-400 dark:text-blue-300 text-center">
+        <thead>
+            <tr className="border-b border-blue-100 dark:border-blue-900/30">
+                <th className="p-2 border-r border-blue-100 dark:border-blue-900/30 bg-blue-100/50 dark:bg-blue-900/20 rounded-tl-lg">Date</th>
+                <th className="p-2 border-r border-blue-100 dark:border-blue-900/30 bg-blue-100/50 dark:bg-blue-900/20">Description</th>
+                <th className="p-2 bg-blue-100/50 dark:bg-blue-900/20 rounded-tr-lg">Amount</th>
+            </tr>
+        </thead>
+                        <tbody className="text-blue-900 dark:text-blue-100"> {/* စာသားအရောင်ကို dark mode မှာ အဖြူဘက်ပြောင်းမယ် */}
+            <tr className="border-b border-blue-100 dark:border-blue-900/20">
+                <td className="p-2 border-r border-blue-100 dark:border-blue-900/20">04/01/2026</td>
+                <td className="p-2 border-r border-blue-100 dark:border-blue-900/20 text-left">Publix Commission</td>
+                <td className="p-2 text-rose-600 dark:text-rose-400">-5012.19</td>
+            </tr>
+                            <tr className="border-b border-blue-100 dark:border-blue-900/20">
+                <td className="p-2 border-r border-blue-100 dark:border-blue-900/20">04/25/2026</td><td className="p-2 border-r border-blue-100 dark:border-blue-900/20 text-left">Grocery</td><td className="p-2 text-rose-600 dark:text-rose-400">-200.00</td></tr>
+                            <tr className="border-b border-blue-100 dark:border-blue-900/20">
+                <td className="p-2 border-r border-blue-100 dark:border-blue-900/20">04/25/2026</td><td className="p-2 border-r border-blue-100 dark:border-blue-900/20 text-left">Client Payment</td><td className="p-2 text-rose-600 dark:text-rose-400">2500.00</td></tr>
                         </tbody>
                     </table>
                 </div>

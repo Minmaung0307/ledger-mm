@@ -168,7 +168,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     {group.items.map((item) => {
                     const isActive = pathname === item.href;
                     return (
-                        <Link key={item.label} href={item.href} className={`flex items-center gap-4 py-2.5 px-4 rounded-xl font-bold transition-all ${isActive ? 'bg-emerald-600 text-white shadow-xl shadow-emerald-100' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white'}`}>
+                        <Link key={item.label} href={item.href} className={`flex items-center gap-4 py-2.5 px-4 rounded-xl font-bold transition-all ${isActive ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
                         {item.icon} <span className="text-sm">{item.label}</span>
                         </Link>
                     );

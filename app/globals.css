@@ -5,7 +5,10 @@
   --base-font-size: 16px;
   --bg-color: #F8FAFC;
   --text-color: #0f172a;
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
   --card-bg: #ffffff;
+  --input-bg: #f1f5f9;
   --border-color: #e2e8f0;
 }
 
@@ -13,21 +16,24 @@
 :root.dark {
   --bg-color: #0f172a;
   --text-color: #f8fafc;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
   --card-bg: #1e293b;
+  --input-bg: #0f172a;
   --border-color: #334155;
 }
 
 /* ၃။ Font Size Scaling */
-:root.text-scale-small { --base-font-size: 14px; }
+:root.text-scale-small { --base-font-size: 13px; }
 :root.text-scale-medium { --base-font-size: 16px; }
-:root.text-scale-large { --base-font-size: 20px; }
+:root.text-scale-large { --base-font-size: 18px; }
 
 /* ၄။ တစ် App လုံးကို အကျိုးသက်ရောက်စေခြင်း */
 html {
   font-size: var(--base-font-size);
   background-color: var(--bg-color);
-  color: var(--text-color);
-  transition: all 0.3s ease;
+  color: var(--text-primary);
+  transition: background-color 0.3s ease;
 }
 
 body {
@@ -51,3 +57,16 @@ body {
 }
 
 .dark .text-slate-900 { color: var(--text-color) !important; }
+
+/* --- Global Fixes --- */
+.dark .bg-white { background-color: var(--card-bg) !important; color: var(--text-primary) !important; }
+.dark .bg-slate-50 { background-color: var(--input-bg) !important; }
+.dark .text-slate-900 { color: var(--text-primary) !important; }
+.dark .text-slate-400, .dark .text-slate-500 { color: var(--text-secondary) !important; }
+.dark .border-slate-100 { border-color: var(--border-color) !important; }
+
+/* Shadow ပြဿနာကို ရှင်းထုတ်ခြင်း */
+.shadow-emerald-100 { shadow: none !important; } /* အရောင်တောက်တာကို ဖျက်မယ် */
+.dark .shadow-xl, .dark .shadow-2xl { 
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5) !important; 
+}

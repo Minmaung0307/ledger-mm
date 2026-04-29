@@ -202,16 +202,16 @@ export default function Dashboard() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-        <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border-b-8 border-emerald-500 relative">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-10">
+        <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border-b-8 border-emerald-500 overflow-hidden min-h-[160px]">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Revenue</p>
-          <p className="text-4xl font-black text-emerald-600 mt-2">${stats.income.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+          <p className="text-2xl md:text-3xl lg:text-4xl font-black text-emerald-600 mt-2 truncate">${stats.income.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
           <div className="mt-4 pt-4 border-t border-slate-50">
              <p className="text-[11px] font-bold text-slate-400 italic">This month: <span className="text-emerald-500 font-black">+${monthlyStats.inc.toLocaleString()}</span></p>
           </div>
         </div>
 
-        <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border-b-8 border-rose-500">
+        <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border-b-8 border-rose-500 overflow-hidden min-h-[160px]">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Expenses</p>
           <p className="text-4xl font-black text-rose-500 mt-2">${stats.expenses.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
           <div className="mt-4 pt-4 border-t border-slate-50">

@@ -30,21 +30,21 @@ export default function TransactionsList() {
           orderBy("date", "desc")
         );
 
+        // --- ဒီအပိုင်းကို အခုလို အသေအချာ ပြန်လဲပေးပါ ---
         const unsubscribeData = onSnapshot(q, (snapshot) => {
-          // ၁။ Snapshot တကယ်ရှိမရှိ အရင်စစ်ပါ
-          if (!snapshot || snapshot.metadata.hasPendingWrites) {
-            // ပိုက်ဆံစာရင်း အသစ်သွင်းနေတုန်း (Local cache အဆင့်) မှာ ခဏစောင့်ခိုင်းတာပါ
-            // ဒါဆိုရင် payload error မတက်တော့ပါဘူး
-            return; 
-          }
+          if (!snapshot) return;
 
+          // hasPendingWrites check ကို ဖယ်လိုက်ပါမယ် (ဒါမှ ချက်ချင်းပြောင်းမှာပါ)
           const items = snapshot.docs.map(doc => {
             const data = doc.data();
+            // serverTimestamp မကျလာသေးတဲ့အချိန် (Pending ဖြစ်နေချိန်) မှာ error မတက်အောင် Guard လုပ်မယ်
+            const safeDate = data.transactionDate?.toDate?.() || data.date?.toDate?.() || new Date();
+            
             return { 
               id: doc.id, 
               ...data,
-              // နေ့စွဲဖတ်တဲ့အခါ serverTimestamp မကျလာသေးရင် လက်ရှိအချိန်ကို ခေတ္တသုံးမယ်
-              displayDate: data.transactionDate?.toDate?.() || data.date?.toDate?.() || new Date()
+              verified: data.verified || false, // verified field ကို သေချာဖတ်မယ်
+              displayDate: safeDate
             };
           });
 

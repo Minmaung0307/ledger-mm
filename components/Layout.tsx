@@ -12,6 +12,7 @@ import { usePathname } from 'next/navigation';
 import { db, auth } from '@/lib/firebase';
 import { onAuthStateChanged, signOut, signInWithPopup, signInWithRedirect, GoogleAuthProvider } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
+import { useAppSettings } from '@/lib/SettingsContext';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<any>(null);
@@ -20,6 +21,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAccountant, setIsAccountant] = useState(false);
+  const { theme, setTheme, fontSize, setFontSize } = useAppSettings();
 
   // Login/Logout Logic
   const login = async () => {

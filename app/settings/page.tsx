@@ -5,8 +5,10 @@ import { db, auth } from '@/lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { Loader2, Moon, Sun, Type, Check, CheckCircle, ShieldCheck } from 'lucide-react';
+import { useAppSettings } from '@/lib/SettingsContext';
 
 export default function Settings() {
+  const { setTheme: updateTheme, setFontSize: updateFontSize } = useAppSettings();
   const [businessName, setBusinessName] = useState('');
   const [address, setAddress] = useState('');
   const [preparerName, setPreparerName] = useState('');
@@ -51,6 +53,9 @@ export default function Settings() {
         accountantEmail: accountantEmail.toLowerCase().trim(),
         uid: auth.currentUser.uid
       }, { merge: true }); // merge: true ထည့်လိုက်ပါပြီ
+
+      updateTheme(theme);
+      updateFontSize(fontSize);
       
       alert("Settings successfully saved!");
       // တစ် App လုံးမှာ theme ပြောင်းသွားအောင် refresh လုပ်မယ်

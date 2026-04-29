@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { SettingsProvider } from "@/lib/SettingsContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,7 +32,10 @@ export default function RootLayout({
         className="..." 
         suppressHydrationWarning={true} // ဒါလေး ထည့်ပေးလိုက်ပါ
       >
-        {children}
+        <SettingsProvider>
+          {children}
+        </SettingsProvider>
+        
       </body>
     </html>
   )

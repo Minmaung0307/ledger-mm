@@ -292,35 +292,65 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Expense Pie Chart */}
-        <div className="bg-white p-8 rounded-[3.5rem] shadow-2xl border-2 border-slate-50 overflow-hidden">
-          <h3 className="font-black text-slate-900 uppercase text-xs tracking-widest mb-10 text-center italic tracking-[0.3em]">Expense Breakdown</h3>
-          <div className="h-[350px] w-full min-h-[350px]">
-            {isMounted && pieData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={70}
-                    outerRadius={100}
-                    paddingAngle={5}
-                    dataKey="value"
-                    animationBegin={0}
-                    animationDuration={1500}
-                  >
-                    {pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip contentStyle={{borderRadius: '20px', border: 'none', fontWeight: 'bold'}} />
-                  <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{fontSize: '10px', fontWeight: 'bold', paddingTop: '20px'}} />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex items-center justify-center text-slate-300 font-bold italic text-xs uppercase">No Expenses Recorded</div>
-            )}
+        {/* --- Expense Pie Chart Section (Updated for Better Legend) --- */}
+        <div className="bg-white p-8 rounded-[3.5rem] shadow-2xl border-2 border-slate-50 overflow-hidden flex flex-col">
+          <h3 className="text-center font-black text-slate-900 uppercase text-xs mb-8 tracking-widest italic">Expense Analysis</h3>
+          
+          <div className="flex-1 flex flex-col">
+            {/* Chart Area */}
+            <div className="h-[280px] w-full">
+              {isMounted && pieData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={90}
+                      paddingAngle={5}
+                      dataKey="value"
+                      animationBegin={0}
+                      animationDuration={1200}
+                    >
+                      {pieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={TAX_CATEGORIES.find(c => c.label === entry.name)?.color || COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      contentStyle={{borderRadius: '20px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontWeight: 'bold'}} 
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex items-center justify-center text-slate-300 font-bold italic text-xs">No Expenses Yet</div>
+              )}
+            </div>
+
+            {/* --- Custom Scrollable Grid Legend --- */}
+            <div className="mt-6 pt-6 border-t border-slate-50 overflow-y-auto max-h-[150px] pr-2 custom-scrollbar">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                {pieData.map((entry, index) => {
+                  const cat = TAX_CATEGORIES.find(c => c.label === entry.name);
+                  return (
+                    <div key={index} className="flex items-center gap-2 group cursor-default">
+                      <div 
+                        className="w-3 h-3 rounded-full flex-shrink-0 shadow-sm" 
+                        style={{ backgroundColor: cat?.color || COLORS[index % COLORS.length] }}
+                      ></div>
+                      <div className="flex justify-between items-center w-full overflow-hidden">
+                        <span className="text-[10px] font-black text-slate-500 truncate group-hover:text-slate-900 transition-colors">
+                          {entry.name}
+                        </span>
+                        <span className="text-[9px] font-bold text-slate-300 ml-1">
+                          {((entry.value / stats.expenses) * 100).toFixed(0)}%
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
       </div>

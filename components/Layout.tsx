@@ -64,6 +64,22 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    const root = window.document.documentElement;
+    
+    // Theme ပြောင်းခြင်း
+    if (appSettings.theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+
+    // Font Size ပြောင်းခြင်း
+    root.classList.remove('text-scale-small', 'text-scale-medium', 'text-scale-large');
+    root.classList.add(`text-scale-${appSettings.fontSize}`);
+
+  }, [appSettings]); // appSettings ပြောင်းတိုင်း ဒီကုဒ် အလုပ်လုပ်ပါမယ်
+
   const navGroups = [
     {
       group: "Business",

@@ -1,44 +1,53 @@
 @import "tailwindcss";
 
-/* ၁။ Font Size Scaling စနစ် */
+/* ၁။ Root Variables သတ်မှတ်ခြင်း */
 :root {
   --base-font-size: 16px;
+  --bg-color: #F8FAFC;
+  --text-color: #0f172a;
+  --card-bg: #ffffff;
+  --border-color: #e2e8f0;
 }
 
-/* html tag မှာ font-size variable ကို ချိတ်မယ် */
+/* ၂။ Dark Mode Variables (Manual Override) */
+:root.dark {
+  --bg-color: #0f172a;
+  --text-color: #f8fafc;
+  --card-bg: #1e293b;
+  --border-color: #334155;
+}
+
+/* ၃။ Font Size Scaling */
+:root.text-scale-small { --base-font-size: 14px; }
+:root.text-scale-medium { --base-font-size: 16px; }
+:root.text-scale-large { --base-font-size: 20px; }
+
+/* ၄။ တစ် App လုံးကို အကျိုးသက်ရောက်စေခြင်း */
 html {
   font-size: var(--base-font-size);
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  transition: all 0.3s ease;
 }
 
-/* Font size အတိုးအလျှော့ class များ */
-.text-scale-small { --base-font-size: 14px; }
-.text-scale-medium { --base-font-size: 16px; }
-.text-scale-large { --base-font-size: 20px; }
-
-/* ၂။ Dark Mode Override (System setting ကို လျစ်လျူရှုပြီး App setting ကိုပဲ ယူမယ်) */
-.dark body {
-  background-color: #0f172a !important; /* slate-900 */
-  color: #f8fafc !important;
-}
-
-/* Dark Mode မှာ အဖြူရောင် Card တွေ အမည်းရောင်ပြောင်းရန် */
-.dark .bg-white {
-  background-color: #1e293b !important; /* slate-800 */
-  color: #f8fafc !important;
-  border-color: #334155 !important;
-}
-
-/* Dark Mode မှာ မီးခိုးရောင် နောက်ခံများ ပြောင်းရန် */
-.dark .bg-slate-50 {
-  background-color: #0f172a !important;
-}
-
-/* စာသားအရောင်များ Dark Mode အတွက် ညှိခြင်း */
-.dark .text-slate-900 { color: #f8fafc !important; }
-.dark .text-slate-400 { color: #94a3b8 !important; }
-.dark .text-slate-500 { color: #cbd5e1 !important; }
-
-/* ၃။ အသွင်ကူးပြောင်းမှု Smooth ဖြစ်စေရန် */
 body {
-  transition: background-color 0.3s ease, color 0.3s ease;
+  background-color: var(--bg-color);
 }
+
+/* Dark Mode မှာ ရှိပြီးသား Tailwind white class တွေကို အတင်းပြောင်းခိုင်းခြင်း */
+.dark .bg-white {
+  background-color: var(--card-bg) !important;
+  color: var(--text-color) !important;
+  border-color: var(--border-color) !important;
+}
+
+.dark aside {
+  background-color: var(--card-bg) !important;
+  border-right-color: var(--border-color) !important;
+}
+
+.dark .bg-\[\#F8FAFC\] {
+  background-color: var(--bg-color) !important;
+}
+
+.dark .text-slate-900 { color: var(--text-color) !important; }

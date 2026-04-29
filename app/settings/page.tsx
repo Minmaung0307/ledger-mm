@@ -54,7 +54,7 @@ export default function Settings() {
       
       alert("Settings successfully saved!");
       // တစ် App လုံးမှာ theme ပြောင်းသွားအောင် refresh လုပ်မယ်
-      window.location.reload(); 
+      // window.location.reload(); 
     } catch (err) {
       alert("Error saving settings");
     } finally {

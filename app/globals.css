@@ -1,74 +1,44 @@
 @import "tailwindcss";
 
+/* ၁။ Font Size Scaling စနစ် */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --base-font-size: 16px;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-}
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-/* Dark Mode အတွက် အရောင်များ */
-.dark {
-  --background: #0f172a;
-  --foreground: #f8fafc;
-  --card: #1e293b;
-  --card-foreground: #f8fafc;
-  --border: #334155;
-  --muted: #64748b;
-}
-
-/* Font Size Scaling */
-.text-scale-small { font-size: 0.875rem !important; } /* 14px */
-.text-scale-medium { font-size: 1rem !important; }    /* 16px */
-.text-scale-large { font-size: 1.125rem !important; }  /* 18px */
-
-body {
-  transition: background-color 0.3s ease, color 0.3s ease;
-}
-
+/* html tag မှာ font-size variable ကို ချိတ်မယ် */
 html {
   font-size: var(--base-font-size);
 }
 
-/* Dark Mode Transitions */
-body {
-  @apply transition-colors duration-300;
-}
+/* Font size အတိုးအလျှော့ class များ */
+.text-scale-small { --base-font-size: 14px; }
+.text-scale-medium { --base-font-size: 16px; }
+.text-scale-large { --base-font-size: 20px; }
 
-/* Dark Mode သွင်းလိုက်တဲ့အခါ မူလ Background တွေကို override လုပ်ဖို့ */
+/* ၂။ Dark Mode Override (System setting ကို လျစ်လျူရှုပြီး App setting ကိုပဲ ယူမယ်) */
 .dark body {
-  background-color: #0f172a; /* slate-900 */
+  background-color: #0f172a !important; /* slate-900 */
+  color: #f8fafc !important;
 }
 
-/* Sidebar နဲ့ Card တွေအတွက် Dark Mode အရောင်အသေ သတ်မှတ်ခြင်း */
+/* Dark Mode မှာ အဖြူရောင် Card တွေ အမည်းရောင်ပြောင်းရန် */
 .dark .bg-white {
   background-color: #1e293b !important; /* slate-800 */
   color: #f8fafc !important;
   border-color: #334155 !important;
 }
 
+/* Dark Mode မှာ မီးခိုးရောင် နောက်ခံများ ပြောင်းရန် */
+.dark .bg-slate-50 {
+  background-color: #0f172a !important;
+}
+
+/* စာသားအရောင်များ Dark Mode အတွက် ညှိခြင်း */
 .dark .text-slate-900 { color: #f8fafc !important; }
 .dark .text-slate-400 { color: #94a3b8 !important; }
-.dark .bg-slate-50 { background-color: #0f172a !important; }
+.dark .text-slate-500 { color: #cbd5e1 !important; }
+
+/* ၃။ အသွင်ကူးပြောင်းမှု Smooth ဖြစ်စေရန် */
+body {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}

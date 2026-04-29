@@ -17,6 +17,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [isLoading, setIsLoading] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // Mobile Menu State
+  const [isAccountant, setIsAccountant] = useState(false);
+
+  {isAccountant && (
+    <div className="bg-amber-500 text-white text-center py-2 font-black text-[10px] uppercase tracking-widest sticky top-0 z-50">
+      Accountant View Only - Read Only Mode Active
+    </div>
+  )}
 
   // Login Logic (ရှိပြီးသားအတိုင်း)
   const login = async () => {

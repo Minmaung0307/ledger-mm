@@ -15,6 +15,7 @@ export default function Settings() {
   const [ptin, setPtin] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [accountantEmail, setAccountantEmail] = useState('');
 
   useEffect(() => {
     onAuthStateChanged(auth, async (user) => {
@@ -42,7 +43,8 @@ export default function Settings() {
         address,
         preparerName,
         ptin,
-        uid: auth.currentUser.uid
+        uid: auth.currentUser.uid,
+        accountantEmail: accountantEmail.toLowerCase().trim()
       });
       alert("Settings successfully saved!");
     } catch (err) {
@@ -69,6 +71,11 @@ export default function Settings() {
               onChange={(e) => setBusinessName(e.target.value)}
               className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-slate-900 focus:border-emerald-500 focus:bg-white outline-none transition-all text-lg"
               placeholder="Your Business Name"
+            />
+            <input 
+              type="email" value={accountantEmail} onChange={e => setAccountantEmail(e.target.value)}
+              placeholder="accountant@email.com" 
+              className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold" 
             />
           </div>
 

@@ -4,19 +4,25 @@ import { useEffect, useState } from 'react';
 import Layout from '@/components/Layout';
 import { db, auth } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { collection, query, orderBy, onSnapshot, where } from 'firebase/firestore';
-import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import { Plus, ChevronDown, CheckCircle2, AlertCircle, Calendar } from 'lucide-react';
+import { collection, query, orderBy, onSnapshot, where, doc, getDoc } from 'firebase/firestore';
+import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, Legend } from 'recharts';
+import { Plus, ChevronDown, CheckCircle2, AlertCircle, Calendar, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
+import { TAX_CATEGORIES } from '@/lib/constants';
 
 export default function Dashboard() {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [stats, setStats] = useState({ income: 0, expenses: 0, estimatedPaid: 0 });
   const [chartData, setChartData] = useState<any[]>([]);
+  const [pieData, setPieData] = useState<any[]>([]); // New state for Pie Chart
   const [loading, setLoading] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
   const [monthlyStats, setMonthlyStats] = useState({ inc: 0, exp: 0 });
   const [showAddMenu, setShowAddMenu] = useState(false);
+  const [isReadOnly, setIsReadOnly] = useState(false); // New state for Accountant View
+
+  // Pie Chart Colors
+  const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316', '#64748b', '#0bf5bb', '#fbbf24', '#6366f1', '#f43f5e', '#14b8a6', '#94a3b8', '#218cf7', '#a855f7', '#60420e', '#def50b', '#cce94b', '#0ea5e9', '#d20bf5', '#bf7b05', '#f5700b', '#475569'];
 
   // ၁။ IRS Tax Deadline တွက်ချက်ခြင်း
   const getNextDeadline = () => {
@@ -43,8 +49,22 @@ export default function Dashboard() {
   useEffect(() => {
     setIsMounted(true); // Component Mounted ဖြစ်ပြီဆိုတာ မှတ်မယ်
 
-    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       if (user) {
+        // --- Accountant View Logic ---
+        // Profile ထဲမှာ ဒီ User ရဲ့ Email က Accountant Email အဖြစ် သတ်မှတ်ခံထားရလား စစ်မယ်
+        const profileRef = doc(db, "profiles", user.uid);
+        const profileSnap = await getDoc(profileRef);
+        
+        // မှတ်ချက်- အကယ်၍ Accountant က ဝင်ကြည့်တာဆိုရင် တခြားသူရဲ့ UID ကို သုံးရမှာဖြစ်ပေမယ့် 
+        // လောလောဆယ် ကိုယ့်အကောင့်ကိုပဲ ReadOnly စမ်းကြည့်လို့ရအောင် logic ထားပေးထားပါတယ်
+        if (profileSnap.exists()) {
+          const profileData = profileSnap.data();
+          if (profileData.accountantEmail === user.email) {
+            setIsReadOnly(true);
+          }
+        }
+
         const q = query(
           collection(db, "transactions"),
           where("uid", "==", user.uid),
@@ -71,6 +91,8 @@ export default function Dashboard() {
           let curMonthInc = 0; let curMonthExp = 0;
           const monthlyDataMap: any = {};
           const now = new Date();
+          const expenseGroupMap: any = {}; // For Pie Chart
+          
 
           data.forEach((item: any) => {
             const date = item.displayDate; // ခုနက safeDate ကို သုံးမယ်
@@ -82,6 +104,9 @@ export default function Dashboard() {
               totalEstPaid += item.amount;
             } else {
               totalExp += item.amount;
+              // Group by category for Pie Chart
+              const catLabel = TAX_CATEGORIES.find(c => c.value === item.category)?.label || 'Other';
+              expenseGroupMap[catLabel] = (expenseGroupMap[catLabel] || 0) + item.amount;
             }
 
             if (!monthlyDataMap[monthLabel]) {
@@ -99,6 +124,7 @@ export default function Dashboard() {
           setStats({ income: totalInc, expenses: totalExp, estimatedPaid: totalEstPaid });
           setMonthlyStats({ inc: curMonthInc, exp: curMonthExp });
           setChartData(Object.values(monthlyDataMap).reverse().slice(-6)); 
+          setPieData(Object.keys(expenseGroupMap).map(name => ({ name, value: expenseGroupMap[name] })));
           setLoading(false);
         }, (error) => {
           console.error("Firestore error:", error);
@@ -118,6 +144,13 @@ export default function Dashboard() {
 
   return (
     <Layout>
+      {/* Accountant View Alert */}
+      {isReadOnly && (
+        <div className="mb-6 bg-amber-500 text-white p-3 rounded-2xl flex items-center justify-center gap-3 font-black text-xs uppercase tracking-[0.2em] shadow-lg animate-in slide-in-from-top-4">
+          <ShieldCheck size={18} /> Accountant Read-Only Mode Active
+        </div>
+      )}
+
       {/* Header Section */}
       <header className="mb-10 pt-4 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
@@ -125,6 +158,8 @@ export default function Dashboard() {
           <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.2em] mt-1 italic">Real-time Performance</p>
         </div>
         
+        {/* Hide Add Transaction if ReadOnly */}
+        {!isReadOnly && (
         <div className="relative">
           <button 
             onClick={() => setShowAddMenu(!showAddMenu)}
@@ -149,6 +184,7 @@ export default function Dashboard() {
             </>
           )}
         </div>
+        )}
       </header>
 
       {/* --- NEW: Tax Deadline Countdown Banner --- */}
@@ -235,44 +271,57 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Chart Section */}
-      <div className="bg-white p-8 md:p-12 rounded-[3.5rem] shadow-2xl border-2 border-slate-50 mb-14 overflow-hidden">
-        <h3 className="font-black text-slate-900 uppercase text-xs tracking-widest mb-10 text-center italic tracking-[0.3em]">
-          Monthly Performance Flow
-        </h3>
+      {/* --- Charts Section (Now with Pie Chart) --- */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-14">
+        {/* Bar Chart */}
+        <div className="bg-white p-8 rounded-[3.5rem] shadow-2xl border-2 border-slate-50 overflow-hidden">
+          <h3 className="font-black text-slate-900 uppercase text-xs tracking-widest mb-10 text-center italic tracking-[0.3em]">Cash Flow</h3>
+          <div className="h-[350px] w-full min-h-[350px]">
+            {isMounted && chartData.length > 0 && (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#475569', fontWeight: 'bold', fontSize: 11}} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#475569', fontSize: 11}} />
+                  <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={{borderRadius: '24px', border: 'none', boxShadow: '0 25px 50px -12px rgb(0 0 0 / 0.15)', fontWeight: 'bold'}} />
+                  <Bar dataKey="income" fill="#10b981" radius={[10, 10, 0, 0]} barSize={40} />
+                  <Bar dataKey="expense" fill="#f43f5e" radius={[10, 10, 0, 0]} barSize={40} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
 
-        {/* Container div မှာ အမြင့်ကို ပုံသေ သတ်မှတ်ပေးထားပါမယ် */}
-        <div className="h-[350px] w-full"> 
-          {isMounted && chartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={350} debounce={50}> 
-              {/* ^^^ height ကို 100% အစား 350 လို့ ပြောင်းလိုက်ပါ၊ debounce လည်း ထည့်လိုက်ပါတယ် */}
-              
-              <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis 
-                  dataKey="month" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{fill: '#475569', fontWeight: 'bold', fontSize: 11}} 
-                />
-                <YAxis 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{fill: '#475569', fontSize: 11}} 
-                />
-                <Tooltip 
-                  cursor={{fill: '#f8fafc'}} 
-                  contentStyle={{borderRadius: '24px', border: 'none', boxShadow: '0 25px 50px -12px rgb(0 0 0 / 0.15)', fontWeight: 'bold'}} 
-                />
-                <Bar dataKey="income" fill="#10b981" radius={[10, 10, 0, 0]} barSize={40} />
-                <Bar dataKey="expense" fill="#f43f5e" radius={[10, 10, 0, 0]} barSize={40} />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="h-full w-full flex items-center justify-center text-slate-300 font-bold italic uppercase tracking-widest text-xs">
-              Preparing Analytics...
-            </div>
-          )}
+        {/* Expense Pie Chart */}
+        <div className="bg-white p-8 rounded-[3.5rem] shadow-2xl border-2 border-slate-50 overflow-hidden">
+          <h3 className="font-black text-slate-900 uppercase text-xs tracking-widest mb-10 text-center italic tracking-[0.3em]">Expense Breakdown</h3>
+          <div className="h-[350px] w-full min-h-[350px]">
+            {isMounted && pieData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={70}
+                    outerRadius={100}
+                    paddingAngle={5}
+                    dataKey="value"
+                    animationBegin={0}
+                    animationDuration={1500}
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{borderRadius: '20px', border: 'none', fontWeight: 'bold'}} />
+                  <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{fontSize: '10px', fontWeight: 'bold', paddingTop: '20px'}} />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center text-slate-300 font-bold italic text-xs uppercase">No Expenses Recorded</div>
+            )}
+          </div>
         </div>
       </div>
 

@@ -6,7 +6,7 @@ import { db, auth } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, query, orderBy, onSnapshot, where, doc, getDoc } from 'firebase/firestore';
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, Legend } from 'recharts';
-import { Plus, ChevronDown, CheckCircle2, AlertCircle, Calendar, ShieldCheck } from 'lucide-react';
+import { Plus, ChevronDown, CheckCircle2, AlertCircle, Calendar, Landmark, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { TAX_CATEGORIES } from '@/lib/constants';
 
@@ -226,6 +226,36 @@ export default function Dashboard() {
              <p className="text-[11px] font-bold text-slate-500 italic">Net Margin: <span className="text-emerald-400 font-black">${(monthlyStats.inc - monthlyStats.exp).toLocaleString()}</span></p>
           </div>
         </div>
+      </div>
+
+      {/* --- The Tax Savings Pot (Smart Guidance) --- */}
+      <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6 no-print">
+          <div className="bg-white dark:bg-slate-800 p-8 rounded-[3rem] shadow-2xl border-2 border-emerald-100 dark:border-emerald-900/30 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity"><Landmark size={80}/></div>
+              <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-2">Smart Saving Recommendation</p>
+              <h4 className="text-xl font-black text-slate-900 dark:text-white mb-4">Transfer to Tax Account</h4>
+              <div className="bg-emerald-50 dark:bg-emerald-900/20 p-6 rounded-3xl">
+                  <p className="text-[10px] font-bold text-emerald-600 uppercase mb-1">Move this amount now:</p>
+                  <p className="text-4xl font-black text-emerald-600">${(netProfit * 0.25).toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+                  <p className="text-[9px] font-bold text-slate-400 mt-3 leading-tight italic">
+                      *သင့်အမြတ်၏ ၂၅% ကို သီးသန့်စုထားခြင်းဖြင့် အခွန်ဆောင်ရမည့်အချိန်တွင် အခက်အခဲမရှိစေရန် အကြံပြုပါသည်။
+                  </p>
+              </div>
+          </div>
+
+          <div className="bg-slate-900 p-8 rounded-[3rem] shadow-2xl flex flex-col justify-center border-t-8 border-rose-500">
+              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Next Steps</p>
+              <h4 className="text-xl font-black text-white mb-6 tracking-tight">IRS Audit Protection Status</h4>
+              <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-emerald-500/20 rounded-2xl flex items-center justify-center text-emerald-500 shadow-inner">
+                      <ShieldCheck size={24} />
+                  </div>
+                  <div>
+                      <p className="text-sm font-black text-white">All Receipts Digitized</p>
+                      <p className="text-[10px] font-bold text-slate-500 uppercase">You are 100% Audit-Ready</p>
+                  </div>
+              </div>
+          </div>
       </div>
 
       {/* <div className="mb-10 bg-slate-900 p-6 rounded-[2rem] flex items-center justify-between shadow-2xl">

@@ -296,6 +296,27 @@ export default function AddTransaction() {
                 </div>
             </div>
 
+            {category === 'mileage' && (
+              <div className="mt-4 p-6 bg-amber-50 border-2 border-amber-200 rounded-[2rem] animate-in zoom-in">
+                <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-2">IRS Mileage Calculator (2026)</p>
+                <div className="flex items-center gap-4">
+                    <input 
+                      type="number" 
+                      placeholder="Enter Miles Driven" 
+                      className="w-1/2 p-4 rounded-2xl border-2 border-amber-100 font-black text-xl outline-none focus:border-amber-500"
+                      onChange={(e) => {
+                        const miles = parseFloat(e.target.value) || 0;
+                        setAmount((miles * 0.67).toFixed(2)); // IRS Standard Rate $0.67
+                      }}
+                    />
+                    <div className="text-right flex-1">
+                        <p className="text-[10px] font-bold text-amber-400 uppercase">Estimated Write-off</p>
+                        <p className="text-2xl font-black text-amber-600">${amount}</p>
+                    </div>
+                </div>
+              </div>
+            )}
+
             {/* Tax Prep Info Box */}
             {category && (
                 <div className="p-5 bg-emerald-50 border-l-8 border-emerald-400 rounded-2xl animate-in fade-in slide-in-from-top-2">

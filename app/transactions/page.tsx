@@ -1,13 +1,17 @@
 // app/transactions/page.tsx
 "use client";
+// @ts-ignore
+import { saveAs } from 'file-saver';
 import { useEffect, useState } from 'react';
 import Layout from '@/components/Layout';
 import { db, auth, storage } from '@/lib/firebase'; // storage ထည့်ထားပါတယ်
 import { onAuthStateChanged } from "firebase/auth";
 import { collection, query, orderBy, onSnapshot, deleteDoc, doc, where, updateDoc, getDocs, writeBatch } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'; // storage function များ
-import { Trash2, Download, Image as ImageIcon, Search, Filter, Edit3, X, CheckCircle2, AlertTriangle, Camera, Calendar as CalendarIcon, Landmark, CheckSquare, Square } from 'lucide-react';
+import { Trash2, Download, Image as ImageIcon, Search, Filter, Edit3, X, CheckCircle2, AlertTriangle, Camera, Calendar as CalendarIcon, Landmark, CheckSquare, Square, FileArchive } from 'lucide-react';
 import { TAX_CATEGORIES } from '@/lib/constants';
+import JSZip from 'jszip';
+
 
 export default function TransactionsList() {
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -126,19 +130,52 @@ export default function TransactionsList() {
   };
 
   const exportToCSV = () => {
-    if (filtered.length === 0) return alert("No data to export");
-    const headers = "Date,Description,Category,Amount,Verified,Account\n";
-    const rows = filtered.map(t => {
-        const date = t.transactionDate?.toDate?.().toLocaleDateString() || t.date?.toDate?.().toLocaleDateString() || "N/A";
-        return `${date},${t.description},${t.category},${t.amount},${t.verified ? 'YES' : 'NO'},${t.bankAccount || 'Other'}`;
-    }).join("\n");
-    const blob = new Blob([headers + rows], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `ledger_export_${new Date().getFullYear()}.csv`;
-    a.click();
-};
+      if (filtered.length === 0) return alert("No data to export");
+      const headers = "Date,Description,Category,Amount,Verified,Account\n";
+      const rows = filtered.map(t => {
+          const date = t.transactionDate?.toDate?.().toLocaleDateString() || t.date?.toDate?.().toLocaleDateString() || "N/A";
+          return `${date},${t.description},${t.category},${t.amount},${t.verified ? 'YES' : 'NO'},${t.bankAccount || 'Other'}`;
+      }).join("\n");
+      const blob = new Blob([headers + rows], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ledger_export_${new Date().getFullYear()}.csv`;
+      a.click();
+  };
+
+  const downloadAuditZip = async () => {
+      const zip = new JSZip();
+      const csvContent = "Date,Description,Category,Amount\n" + 
+          filtered.map(t => `${t.date?.toDate().toLocaleDateString()},${t.description},${t.category},${t.amount}`).join("\n");
+      
+      // ၁။ CSV ဖိုင်ကို Zip ထဲထည့်မယ်
+      zip.file("business_ledger.csv", csvContent);
+      
+      // ၂။ ပုံ (Receipts) တွေကို Folder လိုက် စုထည့်မယ်
+      alert("Starting to bundle your receipts... please wait.");
+      
+      const imgFolder = zip.folder("receipt_images");
+      for (const item of filtered) {
+          if (item.receiptUrl) {
+              try {
+                  const response = await fetch(item.receiptUrl);
+                  const blob = await response.blob();
+                  imgFolder?.file(`${item.description}_${item.id}.jpg`, blob);
+              } catch (err) { console.error("Skip image:", err); }
+          }
+      }
+
+      // ၃။ Zip ဖိုင်ကို ထုတ်ပေးမယ်
+      const content = await zip.generateAsync({ type: "blob" });
+      const url = window.URL.createObjectURL(content);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Business_Audit_Package_${new Date().getFullYear()}.zip`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      saveAs(content, `Business_Audit_Package_${new Date().getFullYear()}.zip`);
+  };
 
   const isPotentialDuplicate = (item: any) => {
     // Dismiss လုပ်ထားတဲ့စာရင်းထဲမှာ ပါနေရင် warning မပြတော့ဘူး
@@ -248,9 +285,16 @@ export default function TransactionsList() {
               }`}>
                 <Filter size={14} /> {showOnlyReceipts ? "RECEIPTS ONLY" : "ALL RECORDS"}
              </button>
-             <button onClick={exportToCSV} className="bg-slate-900 text-white px-6 py-3 rounded-2xl font-black text-[10px] shadow-xl flex items-center gap-2">
-                <Download size={16} /> EXPORT CSV
-             </button>
+             
+             {/* --- Download Buttons Group --- */}
+             <div className="flex gap-2">
+                <button onClick={exportToCSV} className="bg-slate-900 text-white px-5 py-3 rounded-2xl font-black text-[10px] shadow-xl flex items-center gap-2 active:scale-95 transition-all">
+                    <Download size={14} /> CSV
+                </button>
+                <button onClick={downloadAuditZip} className="bg-emerald-600 text-white px-5 py-3 rounded-2xl font-black text-[10px] shadow-xl flex items-center gap-2 active:scale-95 transition-all">
+                    <FileArchive size={14} /> DOWNLOAD AUDIT ZIP
+                </button>
+             </div>
           </div>
         </div>
 

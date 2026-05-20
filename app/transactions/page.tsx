@@ -257,11 +257,32 @@ export default function TransactionsList() {
       }
   };
 
-  const filtered = transactions.filter(t => { // filteredTransactions အစား filtered လို့ ပြောင်းပါ
-    const matchesSearch = t.description.toLowerCase().includes(searchTerm.toLowerCase()) || t.category.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesReceiptToggle = showOnlyReceipts ? (t.receiptUrl && t.receiptUrl !== "") : true;
-    return matchesSearch && matchesReceiptToggle;
-});
+  //   const filtered = transactions.filter(t => { // filteredTransactions အစား filtered လို့ ပြောင်းပါ
+  //     const matchesSearch = t.description.toLowerCase().includes(searchTerm.toLowerCase()) || t.category.toLowerCase().includes(searchTerm.toLowerCase());
+  //     const matchesReceiptToggle = showOnlyReceipts ? (t.receiptUrl && t.receiptUrl !== "") : true;
+  //     return matchesSearch && matchesReceiptToggle;
+  // });
+
+    const filtered = transactions.filter(t => {
+        const searchLower = searchTerm.toLowerCase();
+        
+        // ၁။ ဆိုင်နာမည်နဲ့ ရှာမယ်
+        const matchesDescription = t.description.toLowerCase().includes(searchLower);
+        
+        // ၂။ အမျိုးအစား (Category) နဲ့ ရှာမယ်
+        const matchesCategory = t.category.toLowerCase().includes(searchLower);
+        
+        // ၃။ ငွေပမာဏ (Amount) နဲ့ ရှာမယ် (ဂဏန်းကို စာသားပြောင်းပြီး ရှာခိုင်းတာပါ)
+        const matchesAmount = t.amount.toString().includes(searchTerm);
+
+        // အပေါ်က ၃ ခုထဲက တစ်ခုခုနဲ့ ကိုက်ညီရင် ပြမယ်
+        const matchesSearch = matchesDescription || matchesCategory || matchesAmount;
+
+        // Receipt Toggle အတွက် logic (အရင်အတိုင်းပဲ ထားပါ)
+        const matchesReceiptToggle = showOnlyReceipts ? (t.receiptUrl && t.receiptUrl !== "") : true;
+
+        return matchesSearch && matchesReceiptToggle;
+    });
 
   return (
     <Layout>

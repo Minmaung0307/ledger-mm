@@ -220,74 +220,73 @@ export default function TransactionsList() {
 
   const handleUpdateTransaction = async (e: React.FormEvent) => {
       e.preventDefault();
-      
-      // ၁။ editItem ရှိမရှိနဲ့ ID ပါမပါ အရင်စစ်မယ်
-      if (!editItem || !editItem.id) {
-          alert("Error: Missing record ID. Please refresh and try again.");
-          return;
-      }
-
-      // တကယ်လို့ Saving လုပ်နေတုန်းဆိုရင် ထပ်နှိပ်လို့မရအောင် တားမယ်
-      setIsSaving(true); 
+      if (!editItem?.id) return;
+      setIsSaving(true);
 
       try {
-        let finalReceiptUrl = editItem.receiptUrl || "";
-
-        // ၂။ ပုံအသစ် ရွေးထားတယ်ဆိုရင် Storage အရင်တင်မယ်
+        let finalUrl = editItem.receiptUrl || "";
         if (editItem.newFile) {
-          const storageRef = ref(storage, `receipts/${auth.currentUser?.uid}/${Date.now()}.jpg`);
-          await uploadBytes(storageRef, editItem.newFile);
-          finalReceiptUrl = await getDownloadURL(storageRef);
+          const sRef = ref(storage, `receipts/${auth.currentUser?.uid}/${Date.now()}.jpg`);
+          await uploadBytes(sRef, editItem.newFile);
+          finalUrl = await getDownloadURL(sRef);
         }
 
-        // ၃။ အခြေခံ ဒေတာ ပုံစံကို ပြင်ဆင်မယ်
+        // ၁။ လက်ရှိ ပြင်နေတဲ့ စာရင်းအတွက် အချက်အလက်များကို ပြင်ဆင်မယ်
         const baseData = {
           description: editItem.description,
           amount: Number(editItem.amount),
           category: editItem.category,
-          bankAccount: editItem.bankAccount || "Cash/Other",
+          bankAccount: editItem.bankAccount || "Other",
           transactionDate: new Date(editItem.tempDate),
-          receiptUrl: finalReceiptUrl,
+          receiptUrl: finalUrl,
           uid: auth.currentUser?.uid,
         };
 
-        // ၄။ Firestore မှာ လက်ရှိစာရင်းကို အရင် Update လုပ်မယ်
+        // ၂။ Firestore မှာ လက်ရှိစာရင်းကို အရင် Update လုပ်မယ်
         const docRef = doc(db, "transactions", editItem.id);
         await updateDoc(docRef, baseData);
 
-        // ၅။ အကယ်၍ "Monthly Repeat" ကို အမှန်ခြစ်ထားရင် ကျန်တဲ့လတွေအတွက်ပါ ထည့်မယ်
+        // ၃။ အကယ်၍ "Monthly Repeat" ကို အမှန်ခြစ်ထားရင် ကျန်တဲ့လတွေအတွက်ပါ ထည့်မယ်
         if (isRecurring) {
           const startDate = new Date(editItem.tempDate);
           const currentYear = startDate.getFullYear();
+          const startMonth = startDate.getMonth(); // ၀ ကနေ ၁၁ အထိ
+          const dayOfMonth = startDate.getDate();
+          
           const promises = [];
 
-          // ရွေးထားတဲ့လရဲ့ နောက်လကနေ စပြီး ဒီဇင်ဘာ (Month 11) အထိ loop ပတ်မယ်
-          for (let m = startDate.getMonth() + 1; m <= 11; m++) {
-              const nextDate = new Date(currentYear, m, startDate.getDate());
+          // လက်ရှိပြင်နေတဲ့လရဲ့ "နောက်လ" ကနေ စပြီး ဒီဇင်ဘာ (Month 11) အထိ loop ပတ်မယ်
+          for (let m = startMonth + 1; m <= 11; m++) {
+              const nextDate = new Date(currentYear, m, dayOfMonth);
               
-              // စာရင်းအသစ်တွေအဖြစ် သိမ်းဆည်းမယ်
+              // စာရင်းအသစ်တွေအဖြစ် တစ်ခုချင်းစီ ထည့်မယ်
               promises.push(addDoc(collection(db, "transactions"), {
                   ...baseData,
                   transactionDate: nextDate,
-                  // နာမည်ဘေးမှာ လ နာမည်လေး တွဲပေးလိုက်မယ် (ပိုသေသပ်အောင်)
+                  // နာမည်ကို သိသာအောင် (Month) လေး တွဲပေးလိုက်မယ်
                   description: `${editItem.description} (${nextDate.toLocaleString('default', { month: 'short' })})`,
-                  date: serverTimestamp(), // စာရင်းသွင်းသည့်အချိန်
-                  verified: false // အသစ်တွေမို့လို့ verify မလုပ်ရသေးဘူးလို့ ထားမယ်
+                  date: serverTimestamp(), 
+                  verified: false 
               }));
           }
-          await Promise.all(promises);
-          alert("Success! Record updated and monthly entries added until Dec.");
+
+          // စာရင်းတွေအကုန်လုံး သိမ်းပြီးတဲ့အထိ စောင့်မယ်
+          if (promises.length > 0) {
+              await Promise.all(promises);
+          }
+          alert("Record updated and future monthly entries created!");
         } else {
           alert("Updated successfully!");
         }
 
+        // ၄။ အကုန်လုံးပြီးမှ Modal ပိတ်ပြီး UI refresh လုပ်မယ်
         setEditItem(null);
-        setIsRecurring(false); // Checkbox ကို reset လုပ်မယ်
+        setIsRecurring(false);
         window.location.reload(); 
         
       } catch (error: any) {
-        console.error("Detailed Update Error:", error);
-        alert("Update Failed: " + error.message);
+        console.error("Update error:", error);
+        alert("Error: " + error.message);
       } finally {
         setIsSaving(false);
       }

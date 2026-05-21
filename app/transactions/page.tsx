@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import Layout from '@/components/Layout';
 import { db, auth, storage } from '@/lib/firebase'; // storage ထည့်ထားပါတယ်
 import { onAuthStateChanged } from "firebase/auth";
-import { collection, query, orderBy, onSnapshot, deleteDoc, doc, where, updateDoc, getDocs, writeBatch } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, deleteDoc, doc, where, updateDoc, getDocs, writeBatch, addDoc, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'; // storage function များ
 import { Trash2, Download, Image as ImageIcon, Search, Filter, Edit3, X, CheckCircle2, AlertTriangle, Camera, Calendar as CalendarIcon, Landmark, CheckSquare, Square, FileArchive } from 'lucide-react';
 import { TAX_CATEGORIES } from '@/lib/constants';
@@ -21,6 +21,8 @@ export default function TransactionsList() {
   const [showOnlyReceipts, setShowOnlyReceipts] = useState(false);
   const [editItem, setEditItem] = useState<any>(null);
   const [dismissedAlerts, setDismissedAlerts] = useState<string[]>([]);
+  const [isRecurring, setIsRecurring] = useState(false); // Edit modal အတွက် recurring state
+  const [isSaving, setIsSaving] = useState(false); // <--- ဒီစာကြောင်းလေး ရှိဖို့ လိုပါတယ်
 
   // --- Bulk Operation States ---
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -225,6 +227,9 @@ export default function TransactionsList() {
           return;
       }
 
+      // တကယ်လို့ Saving လုပ်နေတုန်းဆိုရင် ထပ်နှိပ်လို့မရအောင် တားမယ်
+      setIsSaving(true); 
+
       try {
         let finalReceiptUrl = editItem.receiptUrl || "";
 
@@ -235,25 +240,56 @@ export default function TransactionsList() {
           finalReceiptUrl = await getDownloadURL(storageRef);
         }
 
-        // ၃။ Firestore မှာ တကယ်သွားပြင်မယ့်အပိုင်း
-        const docRef = doc(db, "transactions", editItem.id);
-        await updateDoc(docRef, {
+        // ၃။ အခြေခံ ဒေတာ ပုံစံကို ပြင်ဆင်မယ်
+        const baseData = {
           description: editItem.description,
-          amount: Number(editItem.amount), // parseFloat အစား Number သုံးတာ ပိုစိတ်ချရပါတယ်
+          amount: Number(editItem.amount),
           category: editItem.category,
           bankAccount: editItem.bankAccount || "Cash/Other",
           transactionDate: new Date(editItem.tempDate),
-          receiptUrl: finalReceiptUrl
-        });
+          receiptUrl: finalReceiptUrl,
+          uid: auth.currentUser?.uid,
+        };
+
+        // ၄။ Firestore မှာ လက်ရှိစာရင်းကို အရင် Update လုပ်မယ်
+        const docRef = doc(db, "transactions", editItem.id);
+        await updateDoc(docRef, baseData);
+
+        // ၅။ အကယ်၍ "Monthly Repeat" ကို အမှန်ခြစ်ထားရင် ကျန်တဲ့လတွေအတွက်ပါ ထည့်မယ်
+        if (isRecurring) {
+          const startDate = new Date(editItem.tempDate);
+          const currentYear = startDate.getFullYear();
+          const promises = [];
+
+          // ရွေးထားတဲ့လရဲ့ နောက်လကနေ စပြီး ဒီဇင်ဘာ (Month 11) အထိ loop ပတ်မယ်
+          for (let m = startDate.getMonth() + 1; m <= 11; m++) {
+              const nextDate = new Date(currentYear, m, startDate.getDate());
+              
+              // စာရင်းအသစ်တွေအဖြစ် သိမ်းဆည်းမယ်
+              promises.push(addDoc(collection(db, "transactions"), {
+                  ...baseData,
+                  transactionDate: nextDate,
+                  // နာမည်ဘေးမှာ လ နာမည်လေး တွဲပေးလိုက်မယ် (ပိုသေသပ်အောင်)
+                  description: `${editItem.description} (${nextDate.toLocaleString('default', { month: 'short' })})`,
+                  date: serverTimestamp(), // စာရင်းသွင်းသည့်အချိန်
+                  verified: false // အသစ်တွေမို့လို့ verify မလုပ်ရသေးဘူးလို့ ထားမယ်
+              }));
+          }
+          await Promise.all(promises);
+          alert("Success! Record updated and monthly entries added until Dec.");
+        } else {
+          alert("Updated successfully!");
+        }
 
         setEditItem(null);
-        alert("Updated successfully!");
-        window.location.reload(); // UI refresh ဖြစ်သွားအောင်
+        setIsRecurring(false); // Checkbox ကို reset လုပ်မယ်
+        window.location.reload(); 
         
       } catch (error: any) {
-        // ၄။ Error တက်ရင် Console မှာ အသေးစိတ်ကြည့်လို့ရအောင် လုပ်ထားပါတယ်
         console.error("Detailed Update Error:", error);
         alert("Update Failed: " + error.message);
+      } finally {
+        setIsSaving(false);
       }
   };
 
@@ -474,6 +510,20 @@ export default function TransactionsList() {
                         <option value="Cash/Other">Cash / Other</option>
                     </select>
                   </div>
+                </div>
+
+                {/* --- Recurring Option (Repeat Monthly) --- */}
+                <div className="flex items-center gap-4 p-5 bg-emerald-50 dark:bg-emerald-950/20 rounded-3xl border-2 border-emerald-100 dark:border-emerald-900/50 transition-all hover:border-emerald-300">
+                    <input 
+                        type="checkbox" 
+                        id="edit-recurring" 
+                        checked={isRecurring} 
+                        onChange={e => setIsRecurring(e.target.checked)} 
+                        className="w-6 h-6 accent-emerald-600 cursor-pointer shadow-md" 
+                    />
+                    <label htmlFor="edit-recurring" className="text-xs font-black text-emerald-800 dark:text-emerald-400 cursor-pointer uppercase tracking-tighter italic leading-tight">
+                        Repeat this entry monthly until Dec {new Date(editItem.tempDate).getFullYear()}?
+                    </label>
                 </div>
 
                 <button type="submit" className="w-full bg-slate-900 text-white p-6 rounded-2xl font-black uppercase tracking-[0.2em] shadow-xl hover:bg-emerald-600 transition-all active:scale-95">

@@ -7,7 +7,7 @@ import { db, auth, storage } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, addDoc, serverTimestamp, query, where, getDocs, orderBy } from 'firebase/firestore'; 
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { Camera, Loader2, Calendar as CalendarIcon, Landmark, CheckCircle2, Sparkles } from 'lucide-react';
+import { Camera, Loader2, Calendar as CalendarIcon, Landmark, CheckCircle2, Sparkles, HelpCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface Account { id: string; name: string; type: string; uid: string; }
@@ -197,6 +197,27 @@ export default function AddTransaction() {
                     <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest italic mb-2">Tax Prep: {TAX_CATEGORIES.find(c => c.value === category)?.line}</p>
                     <p className="text-xs font-bold text-slate-600 dark:text-slate-400 leading-relaxed">{TAX_CATEGORIES.find(c => c.value === category)?.info}</p>
                 </div>
+            )}
+
+            {category === 'retirement_plans' && (
+              <div className="mt-4 p-6 bg-indigo-50 dark:bg-indigo-900/20 border-l-8 border-indigo-500 rounded-[2rem] animate-in fade-in zoom-in">
+                <div className="flex items-start gap-3">
+                  <div className="bg-indigo-500 text-white p-2 rounded-full flex-shrink-0 animate-pulse">
+                    <HelpCircle size={20} />
+                  </div>
+                  <div>
+                    <h4 className="font-black text-indigo-900 dark:text-indigo-300 uppercase text-xs tracking-widest mb-1">
+                      Why contribute to 401(k)?
+                    </h4>
+                    <p className="text-sm font-bold text-indigo-700 dark:text-indigo-400 leading-relaxed">
+                      {TAX_CATEGORIES.find(c => c.value === 'retirement_plans')?.tip}
+                    </p>
+                    <p className="mt-3 text-[10px] font-black text-indigo-400 uppercase tracking-tighter italic">
+                      *Solo Proprietors can contribute up to $69,000 (2024 limit) to reduce taxes.
+                    </p>
+                  </div>
+                </div>
+              </div>
             )}
 
             <button type="submit" disabled={isSaving} className="w-full bg-slate-900 dark:bg-emerald-600 text-white p-6 rounded-2xl font-black uppercase tracking-[0.2em] shadow-xl hover:bg-emerald-600 dark:hover:bg-slate-900 transition-all active:scale-95 disabled:bg-slate-200">

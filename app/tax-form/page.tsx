@@ -58,6 +58,7 @@ export default function TaxFormWorksheet() {
     { line: "15", label: "Insurance (other than health)", value: getSum('insurance'), desc: "Business insurance premiums" },
     { line: "17", label: "Legal & professional services", value: getSum('legal_fees'), desc: "Legal, accounting and tax prep" },
     { line: "18", label: "Office expense", value: getSum('office') + getSum('software'), desc: "Supplies, software and small tools" },
+    { line: "19", label: "Pension and profit-sharing plans", value: getSum('retirement_plans'), desc: "401(k) or SEP-IRA contributions for employees" },
     { line: "20", label: "Rent or lease", value: getSum('rent'), desc: "Vehicle, machinery or office rent" },
     { line: "24b", label: "Deductible meals", value: getSum('meals') * 0.5, desc: "Business meals (50% rule applied)" },
     { line: "25", label: "Utilities", value: getSum('utilities'), desc: "Business phone and internet" },

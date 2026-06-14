@@ -5,13 +5,13 @@ import {
   LayoutDashboard, Receipt, ShoppingCart, 
   Users, Landmark, FileBarChart, Settings, LogOut, 
   List, ImageIcon, FileText, Menu, X, ChevronRight, 
-  ExternalLink, UploadCloud, ShieldCheck
+  ExternalLink, UploadCloud, ShieldCheck, ShieldAlert
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { db, auth } from '@/lib/firebase';
 import { onAuthStateChanged, signOut, signInWithPopup, signInWithRedirect, GoogleAuthProvider } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useAppSettings } from '@/lib/SettingsContext';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -21,7 +21,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAccountant, setIsAccountant] = useState(false);
-  const { theme, setTheme, fontSize, setFontSize } = useAppSettings();
+  // const { theme, setTheme, fontSize, setFontSize } = useAppSettings();
+  const [userStatus, setUserStatus] = useState('active');
+  
 
   // Login/Logout Logic
   const login = async () => {
@@ -45,8 +47,27 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
-      setUser(u);
+      
       if (u) {
+        setUser(u);
+
+        // ၁။ User အချက်အလက် သိမ်းဆည်းခြင်းနှင့် Status စစ်ဆေးခြင်း
+        const userRef = doc(db, "users", u.uid);
+        const userSnap = await getDoc(userRef);
+        
+        if (userSnap.exists()) {
+            setUserStatus(userSnap.data().status || 'active');
+        }
+
+        // Login ဝင်လာတဲ့သူရဲ့ အချက်အလက်ကို users collection ထဲမှာ သွားမှတ်မယ်
+        await setDoc(userRef, {
+          name: u.displayName,
+          email: u.email,
+          photo: u.photoURL,
+          lastLogin: serverTimestamp(),
+          status: userSnap.exists() ? userSnap.data().status : 'active' 
+        }, { merge: true });
+
         // Profile & Settings ဆွဲယူခြင်း
         const docSnap = await getDoc(doc(db, "profiles", u.uid));
         if (docSnap.exists()) {
@@ -60,6 +81,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             setIsAccountant(true);
           }
         }
+      } else {
+        setUser(null);
       }
       setTimeout(() => setIsLoading(false), 800);
     });
@@ -124,6 +147,18 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <p className="mt-6 italic font-black text-emerald-600 uppercase tracking-widest text-xs">Simple Ledger Pro...</p>
     </div>
   );
+
+  // --- Blocked User Guard ---
+  if (userStatus === 'blocked') {
+    return (
+        <div className="h-screen w-full flex flex-col items-center justify-center bg-rose-50 p-6 text-center">
+            <ShieldAlert size={80} className="text-rose-500 mb-6 animate-bounce" />
+            <h1 className="text-4xl font-black text-slate-900 mb-2 underline decoration-rose-500">ACCESS REVOKED</h1>
+            <p className="text-slate-500 font-bold max-w-sm">Your account has been suspended by the administrator. Please contact support.</p>
+            <button onClick={() => signOut(auth)} className="mt-10 bg-slate-900 text-white px-10 py-5 rounded-[2rem] font-black shadow-2xl active:scale-95 transition-all">LOGOUT</button>
+        </div>
+    );
+  }
 
   if (!user) {
     return (

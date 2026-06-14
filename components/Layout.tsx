@@ -137,6 +137,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       group: "Resources",
       items: [
         { icon: <ExternalLink size={20}/>, label: 'Quick Links', href: '/links' },
+        // လူကြီးမင်း Email ဖြစ်မှသာ ဒီစာကြောင်း ပေါ်လာပါမယ်
+        ...(user?.email === "minmaung0307@gmail.com" ? [
+          { icon: <ShieldCheck size={20}/>, label: 'Admin Panel', href: '/admin' }
+        ] : [])
       ]
     }
   ];

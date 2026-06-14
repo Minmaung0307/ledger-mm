@@ -3,66 +3,87 @@
 import { useEffect, useState } from 'react';
 import Layout from '@/components/Layout';
 import { db, auth } from '@/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 import { collection, onSnapshot, doc, updateDoc } from 'firebase/firestore';
-import { ShieldAlert, UserX, UserCheck, Mail } from 'lucide-react';
+import { ShieldAlert, UserX, UserCheck, Mail, Activity } from 'lucide-react';
 
 export default function AdminPanel() {
   const [allUsers, setAllUsers] = useState<any[]>([]);
-  const adminEmail = "minmaung0307@gmail.com"; // ဥပမာ - "minmaung0307@gmail.com"
+  const [loading, setLoading] = useState(true);
+  
+  // လူကြီးမင်း၏ Gmail အမှန်ကို ဒီမှာ သေချာစစ်ပြီး ထည့်ပါ
+  const adminEmail = "minmaung0307@gmail.com"; 
 
   useEffect(() => {
-    // Admin ဖြစ်မှသာ အသုံးပြုသူစာရင်းကို ပြမယ်
-    if (auth.currentUser?.email !== adminEmail) return;
-
-    const unsubscribe = onSnapshot(collection(db, "users"), (snap) => {
-      setAllUsers(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      if (user && user.email === adminEmail) {
+        const unsubscribeUsers = onSnapshot(collection(db, "users"), (snap) => {
+          setAllUsers(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+          setLoading(false);
+        });
+        return () => unsubscribeUsers();
+      } else {
+        setLoading(false);
+      }
     });
-    return () => unsubscribe();
+    return () => unsubscribeAuth();
   }, []);
 
   const toggleUserStatus = async (userId: string, currentStatus: string) => {
     const newStatus = currentStatus === 'active' ? 'blocked' : 'active';
-    if (confirm(`Change user status to ${newStatus}?`)) {
+    if (confirm(`Are you sure you want to ${newStatus.toUpperCase()} this user?`)) {
         await updateDoc(doc(db, "users", userId), { status: newStatus });
     }
   };
 
-  if (auth.currentUser?.email !== adminEmail) {
-    return <Layout><p className="p-20 text-center font-black text-rose-500">ACCESS DENIED: ADMIN ONLY</p></Layout>;
-  }
+  if (loading) return <Layout><p className="p-20 text-center font-black animate-pulse">Checking Security...</p></Layout>;
 
   return (
     <Layout>
-      <div className="pt-6 pb-20 px-4 max-w-5xl mx-auto">
-        <h2 className="text-4xl font-black text-slate-900 mb-2 tracking-tighter uppercase italic">User Control Center</h2>
-        <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest mb-10">Manage App Access & Permissions</p>
+      <div className="pt-6 pb-40 px-4 max-w-5xl mx-auto">
+        <header className="mb-12">
+            <h2 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">User Control Center</h2>
+            <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest mt-2 flex items-center gap-2">
+                <Activity size={14} className="text-emerald-500" /> App Security & Access Management
+            </p>
+        </header>
 
-        <div className="grid grid-cols-1 gap-4">
-          {allUsers.map(u => (
-            <div key={u.id} className={`bg-white p-6 rounded-[2.5rem] border-2 flex flex-col md:flex-row justify-between items-center gap-4 transition-all ${u.status === 'blocked' ? 'border-rose-200 opacity-60' : 'border-slate-50 shadow-lg'}`}>
-              <div className="flex items-center gap-4">
-                <img src={u.photo} className="w-14 h-14 rounded-2xl border-2 border-slate-100" alt="p" />
-                <div>
-                    <p className="font-black text-slate-900 text-lg">{u.name}</p>
-                    <p className="text-xs font-bold text-slate-400 flex items-center gap-1"><Mail size={12}/> {u.email}</p>
+        <div className="grid grid-cols-1 gap-6">
+          {allUsers.map(u => {
+            const isMe = u.email === adminEmail;
+            return (
+              <div key={u.id} className={`bg-white dark:bg-slate-800 p-6 rounded-[2.5rem] border-2 flex flex-col md:flex-row justify-between items-center gap-6 transition-all ${u.status === 'blocked' ? 'border-rose-200 grayscale opacity-60' : 'border-slate-50 shadow-xl'}`}>
+                
+                {/* User Info */}
+                <div className="flex items-center gap-5 flex-1 overflow-hidden w-full">
+                  <img src={u.photo} className="w-16 h-16 rounded-2xl border-2 border-slate-100 dark:border-slate-700 shadow-md object-cover" alt="p" />
+                  <div className="overflow-hidden">
+                      <p className="font-black text-slate-900 dark:text-white text-xl truncate">
+                        {u.name} {isMe && <span className="text-[10px] bg-emerald-500 text-white px-2 py-0.5 rounded ml-2 uppercase italic">Admin</span>}
+                      </p>
+                      <p className="text-xs font-bold text-slate-400 flex items-center gap-1.5 mt-1 truncate"><Mail size={12}/> {u.email}</p>
+                  </div>
+                </div>
+
+                {/* Actions Section */}
+                <div className="flex items-center gap-4 w-full md:w-auto border-t md:border-t-0 pt-4 md:pt-0 border-slate-50 dark:border-slate-700 justify-between md:justify-end">
+                  <span className={`px-5 py-2 rounded-full font-black text-[10px] uppercase tracking-widest ${u.status === 'active' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
+                      {u.status}
+                  </span>
+                  
+                  {/* ကိုယ့်ကိုယ်ကို Block လို့မရအောင် တားထားပြီး၊ တခြားသူဆိုရင် ခလုတ်ပြမယ် */}
+                  {!isMe && (
+                      <button 
+                          onClick={() => toggleUserStatus(u.id, u.status)}
+                          className={`flex items-center gap-2 px-6 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 shadow-lg ${u.status === 'active' ? 'bg-rose-500 text-white hover:bg-rose-600' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
+                      >
+                          {u.status === 'active' ? <><UserX size={18}/> Block</> : <><UserCheck size={18}/> Unblock</>}
+                      </button>
+                  )}
                 </div>
               </div>
-
-              <div className="flex items-center gap-4">
-                <span className={`px-4 py-1.5 rounded-full font-black text-[10px] uppercase tracking-widest ${u.status === 'active' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
-                    {u.status}
-                </span>
-                {u.email !== adminEmail && (
-                    <button 
-                        onClick={() => toggleUserStatus(u.id, u.status)}
-                        className={`p-4 rounded-2xl transition-all active:scale-95 ${u.status === 'active' ? 'bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white' : 'bg-emerald-50 text-emerald-500 hover:bg-emerald-500 hover:text-white'}`}
-                    >
-                        {u.status === 'active' ? <UserX size={20}/> : <UserCheck size={20}/>}
-                    </button>
-                )}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </Layout>

@@ -245,7 +245,7 @@ export default function Dashboard() {
               <div className="bg-white/20 backdrop-blur-md p-6 rounded-2xl border border-white/20 text-center">
                   <p className="text-[10px] font-bold text-emerald-100 uppercase mb-1">Move this amount now:</p>
                   <p className="text-4xl font-black text-white">${(netProfit * 0.25).toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
-                  <p className="text-[9px] font-bold text-slate-400 mt-3 leading-tight italic">
+                  <p className="text-[10px] font-medium text-white mt-3 leading-tight italic opacity-90">
                       *သင့်အမြတ်၏ ၂၅% ကို သီးသန့်စုထားခြင်းဖြင့် အခွန်ဆောင်ရမည့်အချိန်တွင် အခက်အခဲမရှိစေရန် အကြံပြုပါသည်။
                   </p>
               </div>

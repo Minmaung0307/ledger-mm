@@ -202,57 +202,63 @@ export default function Dashboard() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-10">
-        <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border-b-8 border-emerald-500 overflow-hidden min-h-[160px]">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Revenue</p>
-          <p className="text-2xl md:text-3xl lg:text-4xl font-black text-emerald-600 mt-2 truncate">${stats.income.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+      <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-3 gap-6 mb-8">
+        {/* Card 1: Revenue */}
+        <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-6 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-sm border-t-4 border-t-emerald-500">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Revenue</p>
+          <p className="text-3xl font-black text-slate-800 dark:text-white mt-1">${stats.income.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+          <p className="text-[10px] font-bold text-emerald-500 mt-2">↑ +${monthlyStats.inc.toLocaleString()}</p>
           <div className="mt-4 pt-4 border-t border-slate-50">
              <p className="text-[11px] font-bold text-slate-400 italic">This month: <span className="text-emerald-500 font-black">+${monthlyStats.inc.toLocaleString()}</span></p>
           </div>
         </div>
 
-        <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border-b-8 border-rose-500 overflow-hidden min-h-[160px]">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Expenses</p>
-          <p className="text-4xl font-black text-rose-500 mt-2">${stats.expenses.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+        {/* Card 2: Expenses */}
+        <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-6 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-sm border-t-4 border-t-rose-500">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Expenses</p>
+          <p className="text-3xl font-black text-slate-800 dark:text-white mt-1">${stats.expenses.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+          <p className="text-[10px] font-bold text-rose-500 mt-2">↓ -${monthlyStats.exp.toLocaleString()}</p>
           <div className="mt-4 pt-4 border-t border-slate-50">
              <p className="text-[11px] font-bold text-slate-400 italic">This month: <span className="text-rose-500 font-black">-${monthlyStats.exp.toLocaleString()}</span></p>
           </div>
         </div>
 
-        <div className="bg-slate-900 p-8 rounded-[2.5rem] shadow-xl text-white relative overflow-hidden">
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Net Taxable Profit</p>
-          <p className="text-4xl font-black text-white mt-2">${netProfit.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+        {/* Card 3: Profit */}
+        <div className="bg-slate-900 p-6 rounded-3xl shadow-xl border border-white/5 relative overflow-hidden group">
+        <div className="relative z-10">
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Net Taxable Profit</p>
+          <p className="text-3xl font-black text-white mt-1">${netProfit.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+          <p className="text-[10px] font-bold text-emerald-400 mt-2 italic">Margin Safe</p>
           <div className="mt-4 pt-4 border-t border-slate-800 flex justify-between">
              <p className="text-[11px] font-bold text-slate-500 italic">Net Margin: <span className="text-emerald-400 font-black">${(monthlyStats.inc - monthlyStats.exp).toLocaleString()}</span></p>
           </div>
         </div>
+        </div>
       </div>
 
       {/* --- The Tax Savings Pot (Smart Guidance) --- */}
-      <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6 no-print">
-          <div className="bg-white dark:bg-slate-800 p-8 rounded-[3rem] shadow-2xl border-2 border-emerald-100 dark:border-emerald-900/30 relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity"><Landmark size={80}/></div>
-              <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-2">Smart Saving Recommendation</p>
-              <h4 className="text-xl font-black text-slate-900 dark:text-white mb-4">Transfer to Tax Account</h4>
-              <div className="bg-emerald-50 dark:bg-emerald-900/20 p-6 rounded-3xl">
-                  <p className="text-[10px] font-bold text-emerald-600 uppercase mb-1">Move this amount now:</p>
-                  <p className="text-4xl font-black text-emerald-600">${(netProfit * 0.25).toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+      <div className="mb-12 grid grid-cols-1 lg:grid-cols-2 gap-6 no-print">
+        <div className="bg-emerald-500 p-8 rounded-[2.5rem] shadow-xl relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><Landmark size={120} className="text-white"/></div>
+              <p className="text-emerald-100 font-bold uppercase text-[9px] tracking-widest mb-1">Smart Saving Recommendation</p>
+              <h4 className="text-xl font-black text-white mb-6">Transfer to Tax Account</h4>
+              <div className="bg-white/20 backdrop-blur-md p-6 rounded-2xl border border-white/20 text-center">
+                  <p className="text-[10px] font-bold text-emerald-100 uppercase mb-1">Move this amount now:</p>
+                  <p className="text-4xl font-black text-white">${(netProfit * 0.25).toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
                   <p className="text-[9px] font-bold text-slate-400 mt-3 leading-tight italic">
                       *သင့်အမြတ်၏ ၂၅% ကို သီးသန့်စုထားခြင်းဖြင့် အခွန်ဆောင်ရမည့်အချိန်တွင် အခက်အခဲမရှိစေရန် အကြံပြုပါသည်။
                   </p>
               </div>
           </div>
 
-          <div className="bg-slate-900 p-8 rounded-[3rem] shadow-2xl flex flex-col justify-center border-t-8 border-rose-500">
+          <div className="bg-white dark:bg-slate-800 p-8 rounded-[2.5rem] border border-slate-200 dark:border-slate-700 shadow-lg flex flex-col justify-center">
               <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Next Steps</p>
-              <h4 className="text-xl font-black text-white mb-6 tracking-tight">IRS Audit Protection Status</h4>
-              <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-emerald-500/20 rounded-2xl flex items-center justify-center text-emerald-500 shadow-inner">
-                      <ShieldCheck size={24} />
-                  </div>
+              <h4 className="text-xl font-black text-slate-800 dark:text-white mb-6">IRS Audit Protection Status</h4>
+              <div className="flex items-center gap-4 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <div className="w-10 h-10 bg-emerald-500/10 text-emerald-500 rounded-xl flex items-center justify-center"><ShieldCheck size={24} /></div>
                   <div>
-                      <p className="text-sm font-black text-white">All Receipts Digitized</p>
-                      <p className="text-[10px] font-bold text-slate-500 uppercase">You are 100% Audit-Ready</p>
+                      <p className="text-sm font-bold text-slate-700 dark:text-slate-200 leading-none">All Receipts Digitized</p>
+                      <p className="text-[10px] font-bold text-emerald-500 uppercase mt-1 tracking-tighter">You are 100% Audit-Ready</p>
                   </div>
               </div>
           </div>
@@ -396,18 +402,24 @@ export default function Dashboard() {
             <p className="p-16 text-center text-slate-300 font-bold italic">No financial activity recorded yet.</p>
           ) : (
             transactions.slice(0, 10).map(item => (
-              <div key={item.id} className="py-3 px-8 flex justify-between items-center hover:bg-slate-50 transition border-l-4 border-transparent hover:border-emerald-500">
+              <div key={item.id} className="py-3 px-8 flex justify-between items-center hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors group">
                 <div className="flex items-center gap-3">
+                  <div className="flex flex-col">
+                    <p className="font-bold text-slate-800 dark:text-slate-100 text-sm tracking-tight leading-none mb-1">{item.description}</p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">{item.category.replace('_', ' ')}</span>
                   {/* Verify Check Icon (ရှိရင် ထည့်ပါ) */}
                   {item.verified && (
                     <span title="Verified with Bank">
                       <CheckCircle2 size={16} className="text-emerald-500" />
                     </span>
                   )}
+                  </div>
+                </div>
                   
                   <div>
                     <p className="font-black text-slate-900 text-lg tracking-tight leading-tight">{item.description}</p>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                    <p className={`text-sm md:text-base font-black tracking-tighter ${item.category === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
                     {item.category === 'estimated_tax_paid' ? 'Quarterly Tax Payment' : item.category.replace('_', ' ')}
                     </p>
                   </div>

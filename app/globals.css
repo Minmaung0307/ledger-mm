@@ -4,8 +4,10 @@
 :root {
   --base-font-size: 16px;
   --bg-color: #F8FAFC;
-  --bg-app: #F8FAFC;
-  --bg-card: #ffffff;
+  /* --bg-app: #F8FAFC; */
+  --bg-app: #f1f5f9;
+  /* --bg-card: #ffffff; */
+  --bg-card: rgba(255, 255, 255, 0.8);
   --text-color: #0f172a;
   --text-primary: #0f172a;
   --text-secondary: #64748b;
@@ -13,9 +15,11 @@
   --input-bg: #f1f5f9;
   --border-color: #e2e8f0;
   --bg-input: #f1f5f9;
-  --text-main: #0f172a;
+  /* --text-main: #0f172a; */
+  --text-main: #1e293b;
   --text-muted: #64748b;
   --border-main: #e2e8f0;
+  --border-subtle: rgba(226, 232, 240, 0.6);
 }
 
 /* ၂။ Dark Mode Variables (Manual Override) */
@@ -27,10 +31,14 @@
   --card-bg: #1e293b;
   --input-bg: #0f172a;
   --border-color: #334155;
-  --bg-app: #0f172a;
-  --bg-card: #1e293b;
+  /* --bg-app: #0f172a; */
+  --bg-app: #020617;
+  /* --bg-card: #1e293b; */
+  --bg-card: rgba(15, 23, 42, 0.7);
   --bg-input: #0a0a0a;
-  --text-main: #f8fafc;
+  /* --text-main: #f8fafc; */
+  --text-main: #f1f5f9;
+  --border-subtle: rgba(51, 65, 85, 0.4);
   --text-muted: #94a3b8;
   --border-main: #334155;
 }
@@ -45,11 +53,25 @@ html {
   font-size: var(--base-font-size);
   background-color: var(--bg-app);
   color: var(--text-main);
+  font-family: 'Inter', sans-serif;
   transition: background-color 0.3s ease;
 }
 
 body {
   background-color: var(--bg-app);
+}
+
+/* Glassmorphism Effect */
+.glass-card {
+  background: var(--bg-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-subtle);
+}
+
+/* ထူထူထဲထဲ Shadow အစား နုနုလေးပြောင်းမယ် */
+.soft-shadow {
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
 }
 
 /* Dark Mode မှာ ရှိပြီးသား Tailwind white class တွေကို အတင်းပြောင်းခိုင်းခြင်း */

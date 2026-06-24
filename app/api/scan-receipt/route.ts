@@ -2,21 +2,22 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+
 export async function POST(req: Request) {
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) return NextResponse.json({ error: "API Key is missing in Vercel Settings" }, { status: 500 });
-
     const { image } = await req.json();
-    if (!image) return NextResponse.json({ error: "No image data" }, { status: 400 });
+    const apiKey = process.env.GEMINI_API_KEY;
 
-    const genAI = new GoogleGenerativeAI(apiKey);
+    if (!apiKey) {
+      console.error("Missing API Key");
+      return NextResponse.json({ error: "API Key is missing in Vercel" }, { status: 500 });
+    }
+
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-    // AI ကို JSON သန့်သန့်ပဲ ထုတ်ခိုင်းမယ့် Prompt
-    const prompt = `Extract info from receipt image. 
-    Return ONLY a JSON object: {"merchant": "name", "amount": 0.00, "category": "val", "date": "YYYY-MM-DD"}.
-    Categories: income, produce_cogs, advertising, car_truck, mileage, contract_labor, home_office, insurance, legal_fees, meals, office, rent, software, travel, utilities, w2_wages, owner_draw, other.`;
+    const prompt = `Extract data from receipt. Return ONLY raw JSON: 
+    {"merchant": "...", "amount": 0.00, "category": "...", "date": "YYYY-MM-DD"}. 
+    Use lowercase values for category. No markdown.`;
 
     const imageData = image.includes(',') ? image.split(',')[1] : image;
 
@@ -26,13 +27,13 @@ export async function POST(req: Request) {
     ]);
 
     const text = result.response.text();
-    // JSON စာသားကိုပဲ ဆွဲထုတ်ဖို့ သေချာအောင်လုပ်မယ်
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error("AI response was not in JSON format");
+    // JSON မဟုတ်တဲ့ စာသားတွေ (Markdown) ပါလာရင် ဖယ်ထုတ်မည့် logic
+    const cleanJson = text.replace(/```json/g, "").replace(/```/g, "").trim();
+    
+    return NextResponse.json(JSON.parse(cleanJson));
 
-    return NextResponse.json(JSON.parse(jsonMatch[0]));
   } catch (error: any) {
-    console.error("AI Scan Error:", error.message);
+    console.error("GEMINI API ERROR:", error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

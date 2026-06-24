@@ -79,22 +79,34 @@ export default function AddTransaction() {
   };
 
   const handleAIScan = async (compressedBase64: string) => {
-    setIsScanning(true);
+    setIsScanning(true); // Loading စမယ်
     try {
       const res = await fetch('/api/scan-receipt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ image: compressedBase64 }),
       });
+
+      if (!res.ok) {
+          throw new Error("Server responded with error");
+      }
+
       const data = await res.json();
-      if (data.merchant) {
+      if (data && data.merchant) {
         setDescription(data.merchant);
         setAmount(data.amount.toString());
         if (data.date) setTransDate(data.date);
-        if (TAX_CATEGORIES.some(c => c.value === data.category)) setCategory(data.category);
+        // Category တိုက်စစ်မယ်
+        const validCat = TAX_CATEGORIES.find(c => c.value === data.category);
+        if (validCat) setCategory(data.category);
       }
-    } catch (err) { console.error("AI Error:", err); }
-    finally { setIsScanning(false); }
+    } catch (err) {
+      console.error("AI Error:", err);
+      alert("AI Scan failed. Please type manually.");
+    } finally {
+      // အောင်မြင်သည်ဖြစ်စေ၊ Error တက်သည်ဖြစ်စေ Loading ကို ရပ်မယ်
+      setIsScanning(false); 
+    }
   };
 
   // --- ဤနေရာတွင် handleFileChange ကို သီးသန့် ထုတ်ရေးထားပါသည် ---

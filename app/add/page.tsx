@@ -17,7 +17,6 @@ export default function AddTransaction() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [isScanning, setIsScanning] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
 
   // Form States
@@ -39,12 +38,14 @@ export default function AddTransaction() {
       setUser(u);
       if (u) {
         try {
+          // ၁။ ဘဏ်အကောင့်များ ဆွဲထုတ်ခြင်း
           const qAcc = query(collection(db, "chart_of_accounts"), where("uid", "==", u.uid));
           const accSnap = await getDocs(qAcc);
-          const accs = accSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Account));
-          setAccounts(accs);
-          if (accs.length > 0) setBankAccount(accs[0].name);
+          const accList = accSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Account));
+          setAccounts(accList);
+          if (accList.length > 0) setBankAccount(accList[0].name);
 
+          // ၂။ စာရင်းဟောင်းများမှ Smart Fill အတွက် Data ဆွဲယူခြင်း
           const transSnap = await getDocs(query(collection(db, "transactions"), where("uid", "==", u.uid), orderBy("date", "desc")));
           const historyMap: Record<string, MerchantHistory> = {};
           transSnap.docs.forEach(doc => {
@@ -60,64 +61,22 @@ export default function AddTransaction() {
     return () => unsubscribe();
   }, []);
 
-  // --- Image & AI Logic ---
+  // Image Compression (Free Plan & Storage အဆင်ပြေစေရန်)
   const compressImage = (file: File): Promise<string> => {
     return new Promise((resolve) => {
       const reader = new FileReader(); reader.readAsDataURL(file);
       reader.onload = (e) => {
         const img = new Image(); img.src = e.target?.result as string;
         img.onload = () => {
-          const canvas = document.createElement('canvas');
+          const canvas = document.createElement('canvas'); const MAX = 1000;
           let w = img.width, h = img.height;
-          if (w > 1000) { h *= 1000 / w; w = 1000; }
+          if (w > MAX) { h *= MAX / w; w = MAX; }
           canvas.width = w; canvas.height = h;
           const ctx = canvas.getContext('2d'); ctx?.drawImage(img, 0, 0, w, h);
           resolve(canvas.toDataURL('image/jpeg', 0.5));
         };
       };
     });
-  };
-
-  const handleAIScan = async (compressedBase64: string) => {
-    setIsScanning(true); // Loading စမယ်
-    try {
-      const res = await fetch('/api/scan-receipt', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: compressedBase64 }),
-      });
-
-      if (!res.ok) {
-          throw new Error("Server responded with error");
-      }
-
-      const data = await res.json();
-      if (data && data.merchant) {
-        setDescription(data.merchant);
-        setAmount(data.amount.toString());
-        if (data.date) setTransDate(data.date);
-        // Category တိုက်စစ်မယ်
-        const validCat = TAX_CATEGORIES.find(c => c.value === data.category);
-        if (validCat) setCategory(data.category);
-      }
-    } catch (err) {
-      console.error("AI Error:", err);
-      alert("AI Scan failed. Please type manually.");
-    } finally {
-      // အောင်မြင်သည်ဖြစ်စေ၊ Error တက်သည်ဖြစ်စေ Loading ကို ရပ်မယ်
-      setIsScanning(false); 
-    }
-  };
-
-  // --- ဤနေရာတွင် handleFileChange ကို သီးသန့် ထုတ်ရေးထားပါသည် ---
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0]; 
-    if (f) {
-      setIsScanning(true); // Scanning စတင်မယ်
-      const compressed = await compressImage(f);
-      setPreview(compressed);
-      await handleAIScan(compressed); // AI ဆီ ပို့မယ်
-    }
   };
 
   const base64ToBlob = (base64: string) => {
@@ -128,15 +87,20 @@ export default function AddTransaction() {
     return new Blob([ab], { type: 'image/jpeg' });
   };
 
-  // --- Form Handlers ---
-  const handleDescriptionChange = (val: string) => {
-    setDescription(val);
-    if (val.length > 1) {
-        setFilteredSuggestions(suggestions.filter(m => m.name.toLowerCase().includes(val.toLowerCase())));
-        setShowSuggestions(true);
-    } else { setShowSuggestions(false); }
+  // --- ပုံရွေးလိုက်တာနဲ့ ချက်ချင်းပြသပြီး AI ခေါ်တာမျိုး မလုပ်တော့ပါ ---
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0]; 
+    if (f) {
+      const compressed = await compressImage(f);
+      setPreview(compressed);
+    }
   };
 
+  const selectSuggestion = (m: MerchantHistory) => {
+    setDescription(m.name); setAmount(m.lastAmount); setCategory(m.lastCategory); setShowSuggestions(false);
+  };
+
+  // သိမ်းဆည်းသည့် Logic
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || isSaving) return;
@@ -178,33 +142,33 @@ export default function AddTransaction() {
         
         <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-5 gap-10 items-start">
           <div className="lg:col-span-2 space-y-4">
-            <label className="relative h-64 lg:h-[550px] border-4 border-dashed border-slate-200 dark:border-slate-800 rounded-[3rem] bg-white dark:bg-slate-900 overflow-hidden flex flex-col items-center justify-center cursor-pointer hover:border-emerald-400 transition-all shadow-sm group">
-                {preview ? <img src={preview} className="absolute inset-0 w-full h-full object-cover opacity-60" alt="p" /> : (
+            <label className="relative h-64 lg:h-[550px] border-4 border-dashed border-slate-200 dark:border-slate-800 rounded-[3rem] bg-white dark:bg-slate-900 overflow-hidden flex flex-col items-center justify-center cursor-pointer hover:border-emerald-400 transition-all shadow-sm group active:scale-95">
+                {preview ? <img src={preview} className="absolute inset-0 w-full h-full object-cover" alt="p" /> : (
                   <div className="flex flex-col items-center">
                     <div className="w-20 h-20 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300 mb-3 shadow-inner group-hover:bg-emerald-50 group-hover:text-emerald-500 transition-colors"><Camera size={40} /></div>
                     <p className="font-black text-slate-400 uppercase text-xs tracking-widest">Snap Receipt Photo</p>
                   </div>
                 )}
-                {isScanning && (
-                  <div className="absolute inset-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center animate-in fade-in">
-                    <Loader2 size={48} className="text-emerald-500 animate-spin mb-4" />
-                    <p className="font-black text-emerald-600 uppercase text-xs tracking-[0.2em] animate-pulse">AI is Reading...</p>
-                  </div>
-                )}
                 <input type="file" accept="image/*" capture="environment" onChange={handleFileChange} className="hidden" />
             </label>
-            {preview && !isScanning && <p className="text-center text-[10px] font-black text-emerald-600 uppercase tracking-widest flex items-center justify-center gap-2 animate-pulse"><CheckCircle2 size={14}/> Ready to Sync</p>}
+            {preview && <p className="text-center text-[10px] font-black text-emerald-600 uppercase tracking-widest flex items-center justify-center gap-2 animate-pulse"><CheckCircle2 size={14}/> Image Ready for Sync</p>}
           </div>
 
           <div className="lg:col-span-3 space-y-6">
             <div className="bg-white dark:bg-slate-800 p-8 lg:p-12 rounded-[3.5rem] shadow-2xl border border-slate-50 dark:border-slate-700 space-y-8 relative">
               <div className="relative">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block ml-2 flex items-center gap-2">Merchant Name <Sparkles size={12} className="text-emerald-500" /></label>
-                <input type="text" value={description} onChange={e => handleDescriptionChange(e.target.value)} onFocus={() => description.length > 1 && setShowSuggestions(true)} onBlur={() => setTimeout(() => setShowSuggestions(false), 200)} placeholder="Store Name" className="w-full p-5 bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-black text-slate-900 dark:text-white focus:border-emerald-500 outline-none transition-all text-xl" required />
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block ml-2 flex items-center gap-2">Merchant Name / Description</label>
+                <input type="text" value={description} onChange={e => {
+                    setDescription(e.target.value);
+                    if (e.target.value.length > 1) {
+                        setFilteredSuggestions(suggestions.filter(m => m.name.toLowerCase().includes(e.target.value.toLowerCase())));
+                        setShowSuggestions(true);
+                    } else { setShowSuggestions(false); }
+                }} onFocus={() => description.length > 1 && setShowSuggestions(true)} onBlur={() => setTimeout(() => setShowSuggestions(false), 200)} placeholder="Enter name..." className="w-full p-5 bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-black text-slate-900 dark:text-white focus:border-emerald-500 outline-none transition-all text-xl" required />
                 {showSuggestions && filteredSuggestions.length > 0 && (
                   <div className="absolute z-50 w-full mt-2 bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-[2rem] shadow-2xl overflow-hidden">
                     {filteredSuggestions.slice(0, 5).map((m, i) => (
-                      <button key={i} type="button" onClick={() => { setDescription(m.name); setAmount(m.lastAmount); setCategory(m.lastCategory); setShowSuggestions(false); }} className="w-full text-left p-5 hover:bg-emerald-50 dark:hover:bg-slate-700 font-bold text-slate-700 dark:text-slate-300 border-b last:border-0 border-slate-50 dark:border-slate-700 flex justify-between items-center"><span className="truncate">{m.name}</span><span className="text-[9px] font-black opacity-50 uppercase tracking-widest">Auto: ${m.lastAmount}</span></button>
+                      <button key={i} type="button" onClick={() => selectSuggestion(m)} className="w-full text-left p-5 hover:bg-emerald-50 dark:hover:bg-slate-700 font-bold text-slate-700 dark:text-slate-300 border-b last:border-0 border-slate-50 dark:border-slate-700 flex justify-between items-center"><span className="truncate">{m.name}</span><span className="text-[9px] font-black opacity-50 uppercase tracking-widest">Fill: ${m.lastAmount}</span></button>
                     ))}
                   </div>
                 )}
@@ -217,7 +181,7 @@ export default function AddTransaction() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div><label className="text-[10px] font-black text-slate-400 uppercase mb-2 block ml-4">Category</label><select value={category} onChange={e => setCategory(e.target.value)} className="w-full p-5 bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-bold text-slate-900 dark:text-white outline-none appearance-none cursor-pointer">{TAX_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}</select></div>
-                <div><label className="text-[10px] font-black text-slate-400 uppercase mb-2 block ml-4 flex items-center gap-2"><Landmark size={14} className="text-emerald-500" /> Account</label><select value={bankAccount} onChange={e => setBankAccount(e.target.value)} className="w-full p-5 bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-bold text-slate-900 dark:text-white outline-none appearance-none cursor-pointer">{accounts.map(acc => <option key={acc.id} value={acc.name}>{acc.name}</option>)}<option value="Cash/Other">Cash / Other</option></select></div>
+                <div><label className="text-[10px] font-black text-slate-400 uppercase mb-2 block ml-4 flex items-center gap-2"><Landmark size={14} className="text-emerald-500" /> Paid From</label><select value={bankAccount} onChange={e => setBankAccount(e.target.value)} className="w-full p-5 bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-bold text-slate-900 dark:text-white outline-none appearance-none cursor-pointer">{accounts.map(acc => <option key={acc.id} value={acc.name}>{acc.name}</option>)}<option value="Cash/Other">Cash / Other</option></select></div>
               </div>
 
               <div className="flex items-center gap-4 p-5 bg-emerald-50 dark:bg-emerald-950/20 rounded-3xl border-2 border-emerald-100 dark:border-emerald-900/50">
@@ -226,19 +190,11 @@ export default function AddTransaction() {
               </div>
 
               {category === 'retirement_plans' && (
-                <div className="mt-4 p-6 bg-indigo-50 dark:bg-indigo-900/20 border-l-8 border-indigo-500 rounded-[2rem] animate-in fade-in zoom-in">
-                  <div className="flex items-start gap-3">
-                    <div className="bg-indigo-500 text-white p-2 rounded-full flex-shrink-0 animate-pulse"><HelpCircle size={20} /></div>
-                    <div>
-                      <h4 className="font-black text-indigo-900 dark:text-indigo-300 uppercase text-xs tracking-widest mb-1">Why 401(k)?</h4>
-                      <p className="text-sm font-bold text-indigo-700 dark:text-indigo-400 leading-relaxed">{TAX_CATEGORIES.find(c => c.value === 'retirement_plans')?.tip}</p>
-                    </div>
-                  </div>
-                </div>
+                <div className="mt-4 p-6 bg-indigo-50 dark:bg-indigo-900/20 border-l-8 border-indigo-500 rounded-[2rem] animate-in fade-in zoom-in shadow-sm"><div className="flex items-start gap-3"><div className="bg-indigo-500 text-white p-2 rounded-full flex-shrink-0 animate-pulse"><HelpCircle size={20} /></div><div><h4 className="font-black text-indigo-900 dark:text-indigo-300 uppercase text-xs tracking-widest mb-1">Why 401(k)?</h4><p className="text-sm font-bold text-indigo-700 dark:text-indigo-400 leading-relaxed">{TAX_CATEGORIES.find(c => c.value === 'retirement_plans')?.tip}</p></div></div></div>
               )}
 
-              <button type="submit" disabled={isSaving || isScanning} className="w-full bg-slate-900 dark:bg-emerald-600 text-white p-7 rounded-[2rem] font-black uppercase tracking-[0.3em] shadow-xl hover:bg-emerald-600 dark:hover:bg-slate-900 transition-all active:scale-95 disabled:bg-slate-200">
-                  {isSaving ? <Loader2 className="animate-spin mx-auto" /> : "CONFIRM & SAVE"}
+              <button type="submit" disabled={isSaving} className="w-full bg-slate-900 dark:bg-emerald-600 text-white p-7 rounded-[2rem] font-black uppercase tracking-[0.3em] shadow-xl hover:bg-emerald-600 dark:hover:bg-slate-900 transition-all active:scale-95 disabled:bg-slate-200">
+                  {isSaving ? <Loader2 className="animate-spin mx-auto" /> : "CONFIRM & SAVE RECORD"}
               </button>
             </div>
           </div>

@@ -14,22 +14,25 @@ interface Account { id: string; name: string; type: string; uid: string; }
 interface MerchantHistory { name: string; lastAmount: string; lastCategory: string; }
 
 export default function AddTransaction() {
+  const router = useRouter();
+  const [user, setUser] = useState<any>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
+  const [preview, setPreview] = useState<string | null>(null);
+
+  // Form States
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('other');
   const [bankAccount, setBankAccount] = useState(''); 
   const [transDate, setTransDate] = useState(new Date().toISOString().split('T')[0]); 
   const [isRecurring, setIsRecurring] = useState(false);
-  const [isScanning, setIsScanning] = useState(false); // AI Loading state
   
+  // Data States
+  const [accounts, setAccounts] = useState<Account[]>([]); 
   const [suggestions, setSuggestions] = useState<MerchantHistory[]>([]);
   const [filteredSuggestions, setFilteredSuggestions] = useState<MerchantHistory[]>([]); 
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [accounts, setAccounts] = useState<Account[]>([]); 
-  const [preview, setPreview] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [user, setUser] = useState<any>(null);
-  const router = useRouter();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
@@ -57,7 +60,24 @@ export default function AddTransaction() {
     return () => unsubscribe();
   }, []);
 
-  // --- AI Scan Logic ---
+  // --- Image & AI Logic ---
+  const compressImage = (file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader(); reader.readAsDataURL(file);
+      reader.onload = (e) => {
+        const img = new Image(); img.src = e.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let w = img.width, h = img.height;
+          if (w > 1000) { h *= 1000 / w; w = 1000; }
+          canvas.width = w; canvas.height = h;
+          const ctx = canvas.getContext('2d'); ctx?.drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', 0.5));
+        };
+      };
+    });
+  };
+
   const handleAIScan = async (compressedBase64: string) => {
     setIsScanning(true);
     try {
@@ -77,6 +97,17 @@ export default function AddTransaction() {
     finally { setIsScanning(false); }
   };
 
+  // --- ဤနေရာတွင် handleFileChange ကို သီးသန့် ထုတ်ရေးထားပါသည် ---
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0]; 
+    if (f) {
+      setIsScanning(true); // Scanning စတင်မယ်
+      const compressed = await compressImage(f);
+      setPreview(compressed);
+      await handleAIScan(compressed); // AI ဆီ ပို့မယ်
+    }
+  };
+
   const base64ToBlob = (base64: string) => {
     const byteString = atob(base64.split(',')[1]);
     const ab = new ArrayBuffer(byteString.length);
@@ -85,33 +116,13 @@ export default function AddTransaction() {
     return new Blob([ab], { type: 'image/jpeg' });
   };
 
-  const compressImage = (file: File): Promise<string> => {
-    return new Promise((resolve) => {
-      const reader = new FileReader(); reader.readAsDataURL(file);
-      reader.onload = (e) => {
-        const img = new Image(); img.src = e.target?.result as string;
-        img.onload = () => {
-          const canvas = document.createElement('canvas'); const MAX = 1000;
-          let w = img.width, h = img.height;
-          if (w > MAX) { h *= MAX / w; w = MAX; }
-          canvas.width = w; canvas.height = h;
-          const ctx = canvas.getContext('2d'); ctx?.drawImage(img, 0, 0, w, h);
-          resolve(canvas.toDataURL('image/jpeg', 0.5));
-        };
-      };
-    });
-  };
-
+  // --- Form Handlers ---
   const handleDescriptionChange = (val: string) => {
     setDescription(val);
     if (val.length > 1) {
         setFilteredSuggestions(suggestions.filter(m => m.name.toLowerCase().includes(val.toLowerCase())));
         setShowSuggestions(true);
     } else { setShowSuggestions(false); }
-  };
-
-  const selectSuggestion = (m: MerchantHistory) => {
-    setDescription(m.name); setAmount(m.lastAmount); setCategory(m.lastCategory); setShowSuggestions(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -168,14 +179,7 @@ export default function AddTransaction() {
                     <p className="font-black text-emerald-600 uppercase text-xs tracking-[0.2em] animate-pulse">AI is Reading...</p>
                   </div>
                 )}
-                <input type="file" accept="image/*" capture="environment" onChange={async (e) => { 
-                  const f=e.target.files?.[0]; 
-                  if(f) {
-                    const compressed = await compressImage(f);
-                    setPreview(compressed);
-                    handleAIScan(compressed); // AI ကို ခေါ်လိုက်ပါပြီ
-                  }
-                }} className="hidden" />
+                <input type="file" accept="image/*" capture="environment" onChange={handleFileChange} className="hidden" />
             </label>
             {preview && !isScanning && <p className="text-center text-[10px] font-black text-emerald-600 uppercase tracking-widest flex items-center justify-center gap-2 animate-pulse"><CheckCircle2 size={14}/> Ready to Sync</p>}
           </div>
@@ -221,7 +225,7 @@ export default function AddTransaction() {
                 </div>
               )}
 
-              <button type="submit" disabled={isSaving || isScanning} className="w-full bg-slate-900 dark:bg-emerald-600 text-white p-7 rounded-[2rem] font-black uppercase tracking-[0.3em] shadow-2xl hover:bg-emerald-600 dark:hover:bg-slate-900 transition-all active:scale-95 disabled:bg-slate-200">
+              <button type="submit" disabled={isSaving || isScanning} className="w-full bg-slate-900 dark:bg-emerald-600 text-white p-7 rounded-[2rem] font-black uppercase tracking-[0.3em] shadow-xl hover:bg-emerald-600 dark:hover:bg-slate-900 transition-all active:scale-95 disabled:bg-slate-200">
                   {isSaving ? <Loader2 className="animate-spin mx-auto" /> : "CONFIRM & SAVE"}
               </button>
             </div>

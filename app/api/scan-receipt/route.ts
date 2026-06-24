@@ -2,23 +2,21 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-
 export async function POST(req: Request) {
   try {
-    const { image } = await req.json();
     const apiKey = process.env.GEMINI_API_KEY;
-
     if (!apiKey) {
-      console.error("Missing API Key");
       return NextResponse.json({ error: "API Key is missing in Vercel" }, { status: 500 });
     }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    const prompt = `Extract data from receipt. Return ONLY raw JSON: 
-    {"merchant": "...", "amount": 0.00, "category": "...", "date": "YYYY-MM-DD"}. 
-    Use lowercase values for category. No markdown.`;
+    const { image } = await req.json();
+    if (!image) return NextResponse.json({ error: "No image" }, { status: 400 });
 
+    const genAI = new GoogleGenerativeAI(apiKey);
+    // model name ကို အသေချာဆုံး gemini-1.5-flash ပဲ သုံးပါမယ်
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    const prompt = `Extract merchant, amount (number), and category (meals, office, travel, etc.) from this receipt. Return ONLY JSON: {"merchant": "Name", "amount": 10.00, "category": "meals"}`;
     const imageData = image.includes(',') ? image.split(',')[1] : image;
 
     const result = await model.generateContent([
@@ -27,13 +25,13 @@ export async function POST(req: Request) {
     ]);
 
     const text = result.response.text();
-    // JSON မဟုတ်တဲ့ စာသားတွေ (Markdown) ပါလာရင် ဖယ်ထုတ်မည့် logic
-    const cleanJson = text.replace(/```json/g, "").replace(/```/g, "").trim();
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
     
-    return NextResponse.json(JSON.parse(cleanJson));
-
+    if (!jsonMatch) throw new Error("Format Error");
+    return NextResponse.json(JSON.parse(jsonMatch[0]));
+    
   } catch (error: any) {
-    console.error("GEMINI API ERROR:", error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("DETAILED SERVER ERROR:", error.message);
+    return NextResponse.json({ error: "AI failed to read", details: error.message }, { status: 500 });
   }
 }

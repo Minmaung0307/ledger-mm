@@ -9,6 +9,20 @@ export const TAX_CATEGORIES = [
     color: "#10b981"
   },
 
+  { label: "W-2 Salary Income", 
+    value: "w2_income", 
+    type: "income", 
+    info: "W2 Job (Gross Pay) လစာအပြည့်ကို ထည့်ရန်",
+    color: "#0ea5e9", 
+    line: "Form 1040 - Line 1z",},
+
+    { label: "W-2 Tax Withheld (Paid)", 
+      value: "w2_withheld", 
+      type: "payment", 
+      color: "#8b5cf6", // Violet (အစိုးရကို ကြိုပေးထားတဲ့ ပိုက်ဆံဖြစ်လို့ ခရမ်းရောင် သုံးထားပါတယ်)
+      line: "Form 1040 - Line 25",
+      info: "လစာထဲက အလုပ်ရှင် ဖြတ်ထားပြီးသား Federal/State Tax ပမာဏကို ထည့်ရန်" },
+
   // EXPENSES (DEDUCTIBLE)
   { 
     label: "Produce & Raw Materials (COGS)", 

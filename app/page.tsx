@@ -12,7 +12,7 @@ import { TAX_CATEGORIES } from '@/lib/constants';
 
 export default function Dashboard() {
   const [transactions, setTransactions] = useState<any[]>([]);
-  const [stats, setStats] = useState({ income: 0, expenses: 0, estimatedPaid: 0 });
+  const [stats, setStats] = useState({ income: 0, expenses: 0, estimatedPaid: 0, w2Withheld: 0 });
   const [chartData, setChartData] = useState<any[]>([]);
   const [pieData, setPieData] = useState<any[]>([]); // New state for Pie Chart
   const [loading, setLoading] = useState(true);
@@ -41,10 +41,15 @@ export default function Dashboard() {
 
   const deadline = getNextDeadline();
 
-  // စာရင်းတွက်ချက်မှုများ (Derived States)
+  // --- အခွန်တွက်ချက်မှု Logic များ (ဒီနေရာမှာ ထားပါ) ---
+  // ၁။ အသားတင်အမြတ် (Business Profit)
   const netProfit = stats.income - stats.expenses;
-  const taxLiability = netProfit > 0 ? netProfit * 0.153 : 0; // ၁၅.၃% SE Tax
-  const remainingTax = taxLiability - stats.estimatedPaid; // ဆောင်ရန်ကျန်ငွေ
+  // ၂။ ဆောင်ရမည့် စုစုပေါင်းအခွန် ခန့်မှန်းခြေ (15.3% SE Tax)
+  const taxLiability = netProfit > 0 ? netProfit * 0.153 : 0;
+  // ၃။ NY (W2) မှာ ပေးခဲ့တာရော၊ NC (1099) အတွက် ကြိုပေးတာရော စုစုပေါင်း
+  const totalAlreadyPaid = stats.estimatedPaid + stats.w2Withheld; // NY Tax + NC Pre-paid
+  // ၄။ အစိုးရကို အမှန်တကယ် ထပ်ပေးဖို့ ကျန်တော့မည့် ပမာဏ
+  const remainingTax = taxLiability - totalAlreadyPaid;
 
   useEffect(() => {
     setIsMounted(true); // Component Mounted ဖြစ်ပြီဆိုတာ မှတ်မယ်
@@ -94,6 +99,8 @@ export default function Dashboard() {
           const expenseGroupMap: any = {}; // For Pie Chart
           
 
+          let totalW2Withheld = 0; // variable အသစ် ကြေညာမယ်
+
           data.forEach((item: any) => {
             const date = item.displayDate; // ခုနက safeDate ကို သုံးမယ်
             const monthLabel = date.toLocaleString('default', { month: 'short' });
@@ -119,9 +126,17 @@ export default function Dashboard() {
               if (item.category === 'income') curMonthInc += item.amount;
               else if (item.category !== 'estimated_tax_paid') curMonthExp += item.amount;
             }
+
+            if (item.category === 'w2_withheld') {
+              totalW2Withheld += item.amount;
+            }
           });
 
-          setStats({ income: totalInc, expenses: totalExp, estimatedPaid: totalEstPaid });
+          setStats({ 
+            income: totalInc, 
+            expenses: totalExp, 
+            estimatedPaid: totalEstPaid,
+            w2Withheld: totalW2Withheld });
           setMonthlyStats({ inc: curMonthInc, exp: curMonthExp });
           setChartData(Object.values(monthlyDataMap).reverse().slice(-6)); 
           setPieData(Object.keys(expenseGroupMap).map(name => ({ name, value: expenseGroupMap[name] })));

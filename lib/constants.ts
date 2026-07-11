@@ -67,7 +67,7 @@ export const TAX_CATEGORIES = [
 
   // --- STORE SUPPLIES (Line 18) ---
   { 
-    label: "CONTAINERS (Packaging)", 
+    label: "CONTAINERS (Packaging, Labels & Stickers)", 
     value: "sushi_containers", 
     type: "expense", 
     color: "#64748b", // မီးခိုးရောင် (Slate)

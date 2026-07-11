@@ -21,6 +21,7 @@ export default function Dashboard() {
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [isReadOnly, setIsReadOnly] = useState(false); // New state for Accountant View
   const [smartAlerts, setSmartAlerts] = useState<any[]>([]); // Assistant Alerts အတွက်
+  const [dismissedMessages, setDismissedMessages] = useState<string[]>([]);
 
   // Pie Chart Colors
   const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316', '#64748b', '#0bf5bb', '#fbbf24', '#6366f1', '#f43f5e', '#14b8a6', '#94a3b8', '#218cf7', '#a855f7', '#60420e', '#def50b', '#cce94b', '#0ea5e9', '#d20bf5', '#bf7b05', '#f5700b', '#475569'];
@@ -169,6 +170,7 @@ export default function Dashboard() {
               alerts.push({ type: 'duplicate', msg: `${name} ($${dInfo.amount}) က ${dInfo.count} ကြိမ် ထပ်နေတာ တွေ့ရပါတယ်ဗျာ။`, color: 'amber' });
           });
 
+          const visibleAlerts = alerts.filter(a => !dismissedMessages.includes(a.msg));
           setSmartAlerts(alerts.slice(0, 3)); // အများဆုံး ၃ ခုပဲ ပြမယ်
 
           // --- Stats Update ---
@@ -247,16 +249,28 @@ export default function Dashboard() {
           </div>
           
           {smartAlerts.map((alert, i) => (
-            <div key={i} className={`p-5 rounded-[2rem] border-2 flex items-center justify-between shadow-sm transition-all hover:scale-[1.01] ${alert.color === 'blue' ? 'bg-blue-50/50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-900/30 text-blue-700 dark:text-blue-400' : 'bg-amber-50/50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-900/30 text-amber-700 dark:text-amber-400'}`}>
+            <div key={i} className={`p-5 rounded-[2rem] border-2 flex flex-col md:flex-row items-center justify-between shadow-sm transition-all hover:scale-[1.01] gap-4 ${alert.color === 'blue' ? 'bg-blue-50/50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-900/30 text-blue-700 dark:text-blue-400' : 'bg-amber-50/50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-900/30 text-amber-700 dark:text-amber-400'}`}>
               <div className="flex items-center gap-4">
                 <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-sm ${alert.color === 'blue' ? 'bg-blue-500 text-white' : 'bg-amber-500 text-white'}`}>
                   {alert.type === 'missing' ? <Calendar size={20} /> : <AlertTriangle size={20} />}
                 </div>
-                <p className="text-sm font-bold tracking-tight">{alert.msg}</p>
+                <p className="text-sm font-bold tracking-tight leading-tight">{alert.msg}</p>
               </div>
-              <Link href={alert.type === 'missing' ? "/add" : "/transactions"} className="px-4 py-2 bg-white dark:bg-slate-800 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-sm hover:shadow-md transition-all active:scale-95">
+              
+              <div className="flex items-center gap-2">
+                {/* သိပြီ (Dismiss) ခလုတ် - ဒါကိုနှိပ်ရင် ပျောက်သွားပါမယ် */}
+                <button 
+                  onClick={() => setDismissedMessages([...dismissedMessages, alert.msg])}
+                  className="px-4 py-2 bg-slate-200/50 dark:bg-slate-700 text-slate-500 dark:text-slate-300 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-slate-900 dark:hover:bg-white hover:text-white dark:hover:text-black transition-all active:scale-95"
+                >
+                  သိပြီ
+                </button>
+
+                {/* သွားရန်ခလုတ် */}
+                <Link href={alert.type === 'missing' ? "/add" : "/transactions"} className="px-4 py-2 bg-white dark:bg-slate-800 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-sm hover:shadow-md transition-all active:scale-95 border border-slate-100 dark:border-slate-700">
                   {alert.type === 'missing' ? "သွင်းရန်" : "စစ်ဆေးရန်"}
-              </Link>
+                </Link>
+              </div>
             </div>
           ))}
         </div>

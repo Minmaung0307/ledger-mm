@@ -12,6 +12,7 @@ import { TAX_CATEGORIES } from '@/lib/constants';
 
 export default function Dashboard() {
   const [transactions, setTransactions] = useState<any[]>([]);
+  const [dismissedMessages, setDismissedMessages] = useState<string[]>([]);
   const [stats, setStats] = useState({ income: 0, expenses: 0, estimatedPaid: 0, w2Withheld: 0 });
   const [chartData, setChartData] = useState<any[]>([]);
   const [pieData, setPieData] = useState<any[]>([]); // New state for Pie Chart
@@ -21,7 +22,6 @@ export default function Dashboard() {
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [isReadOnly, setIsReadOnly] = useState(false); // New state for Accountant View
   const [smartAlerts, setSmartAlerts] = useState<any[]>([]); // Assistant Alerts အတွက်
-  const [dismissedMessages, setDismissedMessages] = useState<string[]>([]);
 
   // Pie Chart Colors
   const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316', '#64748b', '#0bf5bb', '#fbbf24', '#6366f1', '#f43f5e', '#14b8a6', '#94a3b8', '#218cf7', '#a855f7', '#60420e', '#def50b', '#cce94b', '#0ea5e9', '#d20bf5', '#bf7b05', '#f5700b', '#475569'];
@@ -52,6 +52,14 @@ export default function Dashboard() {
   const totalAlreadyPaid = stats.estimatedPaid + stats.w2Withheld; // NY Tax + NC Pre-paid
   // ၄။ အစိုးရကို အမှန်တကယ် ထပ်ပေးဖို့ ကျန်တော့မည့် ပမာဏ
   const remainingTax = taxLiability - totalAlreadyPaid;
+
+  useEffect(() => {
+    const key = `dismissed_alerts_${new Date().getMonth()}_${new Date().getFullYear()}`;
+    const saved = localStorage.getItem(key);
+    if (saved) {
+      setDismissedMessages(JSON.parse(saved));
+    }
+  }, []);
 
   useEffect(() => {
     setIsMounted(true); // Component Mounted ဖြစ်ပြီဆိုတာ မှတ်မယ်
@@ -99,15 +107,12 @@ export default function Dashboard() {
           const expenseGroupMap: any = {};
           const now = new Date();
 
-          // --- [Assistant Logic စတင်ခြင်း] ---
           const currentMonth = now.getMonth();
           const currentYear = now.getFullYear();
 
-          // ၁။ Duplicate Check Logic
           const dupeCheck: any = {};
           const foundDuplicates: any[] = [];
           
-          // ၂။ Recurring Check Logic
           const pastMerchants: string[] = [];
           const currentMonthMerchants: string[] = [];
 
@@ -115,7 +120,10 @@ export default function Dashboard() {
             const date = item.displayDate;
             const monthLabel = date.toLocaleString('default', { month: 'short' });
 
-            // --- ပုံမှန် Logic များ (W2, Pie Chart, Stats) ---
+            // --- [Smart Fix]: Recurring နာမည်များကို သန့်စင်ခြင်း ---
+            // (Apr), (May) စတာတွေကို ဖြုတ်ပြီး မူရင်းနာမည်ကိုပဲ ယူမယ်
+            const cleanName = item.description.split(' (')[0].trim();
+
             if (item.category === 'income' || item.category === 'w2_income') {
               totalInc += item.amount;
             } else if (item.category === 'estimated_tax_paid') {
@@ -136,14 +144,11 @@ export default function Dashboard() {
               if (item.category === 'income' || item.category === 'w2_income') curMonthInc += item.amount;
               else if (item.category !== 'estimated_tax_paid' && item.category !== 'w2_withheld') curMonthExp += item.amount;
               
-              // ဒီလထဲက ဆိုင်နာမည်တွေကို မှတ်မယ်
-              currentMonthMerchants.push(item.description);
+              currentMonthMerchants.push(cleanName); // Cleaned name ကို ထည့်မယ်
             } else {
-              // အရင်လက ဆိုင်နာမည်တွေကို မှတ်မယ်
-              pastMerchants.push(item.description);
+              pastMerchants.push(cleanName); // Cleaned name ကို ထည့်မယ်
             }
 
-            // Duplicate Check (Description + Amount + Date တူရင်)
             const dupeKey = `${item.description}-${item.amount}-${date.toLocaleDateString()}`;
             dupeCheck[dupeKey] = (dupeCheck[dupeKey] || 0) + 1;
             if (dupeCheck[dupeKey] >= 2) {
@@ -151,29 +156,27 @@ export default function Dashboard() {
             }
           });
 
-          // Smart Alerts စာရင်း စုစည်းခြင်း
           const alerts: any[] = [];
-
-          // (A) Recurring Missing Alert: အရင်က ၂ ခါထက်မက သွင်းဖူးပြီး ဒီလမှာ ကျန်နေတဲ့ဆိုင်တွေကို ရှာမယ်
           const uniquePast = Array.from(new Set(pastMerchants));
+          
           uniquePast.forEach(name => {
               const frequency = pastMerchants.filter(n => n === name).length;
+              // ဒီလထဲမှာ မူရင်းနာမည်နဲ့ တူတာရှိရင် "မသွင်းရသေးဘူး" လို့ မပြောတော့ပါဘူး
               if (frequency >= 2 && !currentMonthMerchants.includes(name)) {
                   alerts.push({ type: 'missing', msg: `${name} ကို ဒီလအတွက် စာရင်းသွင်းရန်။`, color: 'blue' });
               }
           });
 
-          // (B) Serious Duplicate Alert: တကယ် ၂ ကြိမ်ထက်ပိုနေတာတွေကိုပဲ ပြမယ်
           const uniqueDupes = Array.from(new Set(foundDuplicates.map(d => d.name)));
           uniqueDupes.slice(0, 2).forEach(name => {
               const dInfo = foundDuplicates.find(d => d.name === name);
               alerts.push({ type: 'duplicate', msg: `${name} ($${dInfo.amount}) က ${dInfo.count} ကြိမ် ထပ်နေတာ တွေ့ရပါတယ်ဗျာ။`, color: 'amber' });
           });
 
+          // --- [Smart Fix]: Dismiss လုပ်ထားတာတွေကို ဖယ်ထုတ်ပြီးမှ State ထဲ ထည့်မယ် ---
           const visibleAlerts = alerts.filter(a => !dismissedMessages.includes(a.msg));
-          setSmartAlerts(alerts); // အများဆုံး ၃ ခုပဲ ပြမယ်
+          setSmartAlerts(visibleAlerts.slice(0, 3)); 
 
-          // --- Stats Update ---
           setStats({ income: totalInc, expenses: totalExp, estimatedPaid: totalEstPaid, w2Withheld: totalW2Withheld });
           setMonthlyStats({ inc: curMonthInc, exp: curMonthExp });
           setChartData(Object.values(monthlyDataMap).reverse().slice(-6)); 
@@ -191,7 +194,14 @@ export default function Dashboard() {
     });
 
     return () => unsubscribeAuth();
-  }, []);
+  }, [dismissedMessages]); // dismissedMessages ပြောင်းရင် data ကို ပြန်စစ်ခိုင်းဖို့ပါ
+
+  const handleDismiss = (msg: string) => {
+    const updated = [...dismissedMessages, msg];
+    setDismissedMessages(updated);
+    const key = `dismissed_alerts_${new Date().getMonth()}_${new Date().getFullYear()}`;
+    localStorage.setItem(key, JSON.stringify(updated));
+  };
 
   if (loading) return <Layout><p className="p-20 text-center font-black animate-pulse text-slate-400 uppercase tracking-widest">Syncing Financials...</p></Layout>;
 
@@ -264,7 +274,7 @@ export default function Dashboard() {
           <div className="flex items-center gap-2">
             {/* သိပြီ ခလုတ် - နှိပ်လိုက်တာနဲ့ React က ချက်ချင်း Re-render လုပ်ပြီး ဖျောက်ပေးပါလိမ့်မယ် */}
             <button 
-              onClick={() => setDismissedMessages(prev => [...prev, alert.msg])}
+              onClick={() => handleDismiss(alert.msg)}
               className="px-4 py-2 bg-white/50 dark:bg-slate-700 text-slate-500 dark:text-slate-300 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-slate-900 dark:hover:bg-white hover:text-white dark:hover:text-black transition-all active:scale-95 border border-slate-200 dark:border-slate-600"
             >
               Dismiss

@@ -159,7 +159,7 @@ export default function Dashboard() {
           uniquePast.forEach(name => {
               const frequency = pastMerchants.filter(n => n === name).length;
               if (frequency >= 2 && !currentMonthMerchants.includes(name)) {
-                  alerts.push({ type: 'missing', msg: `${name} ကို ဒီလအတွက် မသွင်းရသေးတာ သတိပြုမိပါတယ်ဗျာ။`, color: 'blue' });
+                  alerts.push({ type: 'missing', msg: `${name} ကို ဒီလအတွက် စာရင်းသွင်းရန်။`, color: 'blue' });
               }
           });
 
@@ -171,7 +171,7 @@ export default function Dashboard() {
           });
 
           const visibleAlerts = alerts.filter(a => !dismissedMessages.includes(a.msg));
-          setSmartAlerts(alerts.slice(0, 3)); // အများဆုံး ၃ ခုပဲ ပြမယ်
+          setSmartAlerts(alerts); // အများဆုံး ၃ ခုပဲ ပြမယ်
 
           // --- Stats Update ---
           setStats({ income: totalInc, expenses: totalExp, estimatedPaid: totalEstPaid, w2Withheld: totalW2Withheld });
@@ -241,40 +241,43 @@ export default function Dashboard() {
       </header>
 
       {/* --- Smart Financial Assistant Section --- */}
-      {smartAlerts.length > 0 && (
-        <div className="mb-10 space-y-3 no-print animate-in fade-in slide-in-from-top-4 duration-700">
-          <div className="flex items-center gap-2 px-4 mb-2">
-              <Sparkles size={16} className="text-amber-500 animate-pulse" />
-              <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Financial Assistant Insights</p>
+      {smartAlerts.filter(a => !dismissedMessages.includes(a.msg)).length > 0 && (
+  <div className="mb-10 space-y-3 no-print">
+    <div className="flex items-center gap-2 px-4 mb-2">
+        <Sparkles size={16} className="text-amber-500 animate-pulse" />
+        <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Financial Assistant Insights</p>
+    </div>
+    
+    {/* ဤနေရာတွင် filter ကို တိုက်ရိုက် သုံးထားပါတယ် */}
+    {smartAlerts
+        .filter(a => !dismissedMessages.includes(a.msg))
+        .slice(0, 3)
+        .map((alert, i) => (
+        <div key={i} className={`p-5 rounded-[2rem] border-2 flex flex-col md:flex-row items-center justify-between shadow-sm transition-all hover:scale-[1.01] gap-4 ${alert.color === 'blue' ? 'bg-blue-50/50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-900/30 text-blue-700 dark:text-blue-400' : 'bg-amber-50/50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-900/30 text-amber-700 dark:text-amber-400'}`}>
+          <div className="flex items-center gap-4">
+            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-sm ${alert.color === 'blue' ? 'bg-blue-500 text-white' : 'bg-amber-500 text-white'}`}>
+              {alert.type === 'missing' ? <Calendar size={20} /> : <AlertTriangle size={20} />}
+            </div>
+            <p className="text-sm font-bold tracking-tight leading-tight">{alert.msg}</p>
           </div>
           
-          {smartAlerts.map((alert, i) => (
-            <div key={i} className={`p-5 rounded-[2rem] border-2 flex flex-col md:flex-row items-center justify-between shadow-sm transition-all hover:scale-[1.01] gap-4 ${alert.color === 'blue' ? 'bg-blue-50/50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-900/30 text-blue-700 dark:text-blue-400' : 'bg-amber-50/50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-900/30 text-amber-700 dark:text-amber-400'}`}>
-              <div className="flex items-center gap-4">
-                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-sm ${alert.color === 'blue' ? 'bg-blue-500 text-white' : 'bg-amber-500 text-white'}`}>
-                  {alert.type === 'missing' ? <Calendar size={20} /> : <AlertTriangle size={20} />}
-                </div>
-                <p className="text-sm font-bold tracking-tight leading-tight">{alert.msg}</p>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                {/* သိပြီ (Dismiss) ခလုတ် - ဒါကိုနှိပ်ရင် ပျောက်သွားပါမယ် */}
-                <button 
-                  onClick={() => setDismissedMessages([...dismissedMessages, alert.msg])}
-                  className="px-4 py-2 bg-slate-200/50 dark:bg-slate-700 text-slate-500 dark:text-slate-300 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-slate-900 dark:hover:bg-white hover:text-white dark:hover:text-black transition-all active:scale-95"
-                >
-                  သိပြီ
-                </button>
+          <div className="flex items-center gap-2">
+            {/* သိပြီ ခလုတ် - နှိပ်လိုက်တာနဲ့ React က ချက်ချင်း Re-render လုပ်ပြီး ဖျောက်ပေးပါလိမ့်မယ် */}
+            <button 
+              onClick={() => setDismissedMessages(prev => [...prev, alert.msg])}
+              className="px-4 py-2 bg-white/50 dark:bg-slate-700 text-slate-500 dark:text-slate-300 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-slate-900 dark:hover:bg-white hover:text-white dark:hover:text-black transition-all active:scale-95 border border-slate-200 dark:border-slate-600"
+            >
+              Dismiss
+            </button>
 
-                {/* သွားရန်ခလုတ် */}
-                <Link href={alert.type === 'missing' ? "/add" : "/transactions"} className="px-4 py-2 bg-white dark:bg-slate-800 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-sm hover:shadow-md transition-all active:scale-95 border border-slate-100 dark:border-slate-700">
-                  {alert.type === 'missing' ? "သွင်းရန်" : "စစ်ဆေးရန်"}
-                </Link>
-              </div>
-            </div>
-          ))}
+            <Link href={alert.type === 'missing' ? "/add" : "/transactions"} className="px-4 py-2 bg-white dark:bg-slate-800 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-sm hover:shadow-md transition-all active:scale-95 border border-slate-100 dark:border-slate-700">
+              {alert.type === 'missing' ? "သွင်းရန်" : "စစ်ဆေးရန်"}
+            </Link>
+          </div>
         </div>
-      )}
+      ))}
+    </div>
+  )}
 
       {/* --- NEW: Tax Deadline Countdown Banner --- */}
       <div className="mb-10 bg-slate-900 p-6 rounded-[2.5rem] flex flex-col md:flex-row items-center justify-between shadow-2xl border border-slate-800">

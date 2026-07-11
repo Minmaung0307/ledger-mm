@@ -6,7 +6,7 @@ import { db, auth } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, query, orderBy, onSnapshot, where, doc, getDoc } from 'firebase/firestore';
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, Legend } from 'recharts';
-import { Plus, ChevronDown, CheckCircle2, AlertCircle, Calendar, Landmark, ShieldCheck } from 'lucide-react';
+import { Plus, ChevronDown, CheckCircle2, AlertCircle, Calendar, Sparkles, AlertTriangle, Landmark, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { TAX_CATEGORIES } from '@/lib/constants';
 
@@ -20,6 +20,7 @@ export default function Dashboard() {
   const [monthlyStats, setMonthlyStats] = useState({ inc: 0, exp: 0 });
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [isReadOnly, setIsReadOnly] = useState(false); // New state for Accountant View
+  const [smartAlerts, setSmartAlerts] = useState<any[]>([]); // Assistant Alerts အတွက်
 
   // Pie Chart Colors
   const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316', '#64748b', '#0bf5bb', '#fbbf24', '#6366f1', '#f43f5e', '#14b8a6', '#94a3b8', '#218cf7', '#a855f7', '#60420e', '#def50b', '#cce94b', '#0ea5e9', '#d20bf5', '#bf7b05', '#f5700b', '#475569'];
@@ -81,11 +82,9 @@ export default function Dashboard() {
 
           const data = snapshot.docs.map(doc => {
             const item = doc.data();
-            
             return {
               id: doc.id,
               ...item,
-              // payload error ကာကွယ်ရန် Safe Date ယူခြင်း
               displayDate: item.transactionDate?.toDate?.() || item.date?.toDate?.() || new Date()
             };
           });
@@ -94,49 +93,86 @@ export default function Dashboard() {
 
           let totalInc = 0; let totalExp = 0; let totalEstPaid = 0;
           let curMonthInc = 0; let curMonthExp = 0;
+          let totalW2Withheld = 0;
           const monthlyDataMap: any = {};
+          const expenseGroupMap: any = {};
           const now = new Date();
-          const expenseGroupMap: any = {}; // For Pie Chart
-          
 
-          let totalW2Withheld = 0; // variable အသစ် ကြေညာမယ်
+          // --- [Assistant Logic စတင်ခြင်း] ---
+          const currentMonth = now.getMonth();
+          const currentYear = now.getFullYear();
+
+          // ၁။ Duplicate Check Logic
+          const dupeCheck: any = {};
+          const foundDuplicates: any[] = [];
+          
+          // ၂။ Recurring Check Logic
+          const pastMerchants: string[] = [];
+          const currentMonthMerchants: string[] = [];
 
           data.forEach((item: any) => {
-            const date = item.displayDate; // ခုနက safeDate ကို သုံးမယ်
+            const date = item.displayDate;
             const monthLabel = date.toLocaleString('default', { month: 'short' });
-            
-            if (item.category === 'income') {
+
+            // --- ပုံမှန် Logic များ (W2, Pie Chart, Stats) ---
+            if (item.category === 'income' || item.category === 'w2_income') {
               totalInc += item.amount;
             } else if (item.category === 'estimated_tax_paid') {
               totalEstPaid += item.amount;
+            } else if (item.category === 'w2_withheld') {
+              totalW2Withheld += item.amount;
             } else {
               totalExp += item.amount;
-              // Group by category for Pie Chart
               const catLabel = TAX_CATEGORIES.find(c => c.value === item.category)?.label || 'Other';
               expenseGroupMap[catLabel] = (expenseGroupMap[catLabel] || 0) + item.amount;
             }
 
-            if (!monthlyDataMap[monthLabel]) {
-              monthlyDataMap[monthLabel] = { month: monthLabel, income: 0, expense: 0 };
-            }
-            if (item.category === 'income') monthlyDataMap[monthLabel].income += item.amount;
-            else if (item.category !== 'estimated_tax_paid') monthlyDataMap[monthLabel].expense += item.amount;
+            if (!monthlyDataMap[monthLabel]) monthlyDataMap[monthLabel] = { month: monthLabel, income: 0, expense: 0 };
+            if (item.category === 'income' || item.category === 'w2_income') monthlyDataMap[monthLabel].income += item.amount;
+            else if (item.category !== 'estimated_tax_paid' && item.category !== 'w2_withheld') monthlyDataMap[monthLabel].expense += item.amount;
 
-            if (date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear()) {
-              if (item.category === 'income') curMonthInc += item.amount;
-              else if (item.category !== 'estimated_tax_paid') curMonthExp += item.amount;
+            if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
+              if (item.category === 'income' || item.category === 'w2_income') curMonthInc += item.amount;
+              else if (item.category !== 'estimated_tax_paid' && item.category !== 'w2_withheld') curMonthExp += item.amount;
+              
+              // ဒီလထဲက ဆိုင်နာမည်တွေကို မှတ်မယ်
+              currentMonthMerchants.push(item.description);
+            } else {
+              // အရင်လက ဆိုင်နာမည်တွေကို မှတ်မယ်
+              pastMerchants.push(item.description);
             }
 
-            if (item.category === 'w2_withheld') {
-              totalW2Withheld += item.amount;
+            // Duplicate Check (Description + Amount + Date တူရင်)
+            const dupeKey = `${item.description}-${item.amount}-${date.toLocaleDateString()}`;
+            dupeCheck[dupeKey] = (dupeCheck[dupeKey] || 0) + 1;
+            if (dupeCheck[dupeKey] >= 2) {
+              foundDuplicates.push({ name: item.description, amount: item.amount, count: dupeCheck[dupeKey] });
             }
           });
 
-          setStats({ 
-            income: totalInc, 
-            expenses: totalExp, 
-            estimatedPaid: totalEstPaid,
-            w2Withheld: totalW2Withheld });
+          // Smart Alerts စာရင်း စုစည်းခြင်း
+          const alerts: any[] = [];
+
+          // (A) Recurring Missing Alert: အရင်က ၂ ခါထက်မက သွင်းဖူးပြီး ဒီလမှာ ကျန်နေတဲ့ဆိုင်တွေကို ရှာမယ်
+          const uniquePast = Array.from(new Set(pastMerchants));
+          uniquePast.forEach(name => {
+              const frequency = pastMerchants.filter(n => n === name).length;
+              if (frequency >= 2 && !currentMonthMerchants.includes(name)) {
+                  alerts.push({ type: 'missing', msg: `${name} ကို ဒီလအတွက် မသွင်းရသေးတာ သတိပြုမိပါတယ်ဗျာ။`, color: 'blue' });
+              }
+          });
+
+          // (B) Serious Duplicate Alert: တကယ် ၂ ကြိမ်ထက်ပိုနေတာတွေကိုပဲ ပြမယ်
+          const uniqueDupes = Array.from(new Set(foundDuplicates.map(d => d.name)));
+          uniqueDupes.slice(0, 2).forEach(name => {
+              const dInfo = foundDuplicates.find(d => d.name === name);
+              alerts.push({ type: 'duplicate', msg: `${name} ($${dInfo.amount}) က ${dInfo.count} ကြိမ် ထပ်နေတာ တွေ့ရပါတယ်ဗျာ။`, color: 'amber' });
+          });
+
+          setSmartAlerts(alerts.slice(0, 3)); // အများဆုံး ၃ ခုပဲ ပြမယ်
+
+          // --- Stats Update ---
+          setStats({ income: totalInc, expenses: totalExp, estimatedPaid: totalEstPaid, w2Withheld: totalW2Withheld });
           setMonthlyStats({ inc: curMonthInc, exp: curMonthExp });
           setChartData(Object.values(monthlyDataMap).reverse().slice(-6)); 
           setPieData(Object.keys(expenseGroupMap).map(name => ({ name, value: expenseGroupMap[name] })));
@@ -201,6 +237,30 @@ export default function Dashboard() {
         </div>
         )}
       </header>
+
+      {/* --- Smart Financial Assistant Section --- */}
+      {smartAlerts.length > 0 && (
+        <div className="mb-10 space-y-3 no-print animate-in fade-in slide-in-from-top-4 duration-700">
+          <div className="flex items-center gap-2 px-4 mb-2">
+              <Sparkles size={16} className="text-amber-500 animate-pulse" />
+              <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Financial Assistant Insights</p>
+          </div>
+          
+          {smartAlerts.map((alert, i) => (
+            <div key={i} className={`p-5 rounded-[2rem] border-2 flex items-center justify-between shadow-sm transition-all hover:scale-[1.01] ${alert.color === 'blue' ? 'bg-blue-50/50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-900/30 text-blue-700 dark:text-blue-400' : 'bg-amber-50/50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-900/30 text-amber-700 dark:text-amber-400'}`}>
+              <div className="flex items-center gap-4">
+                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-sm ${alert.color === 'blue' ? 'bg-blue-500 text-white' : 'bg-amber-500 text-white'}`}>
+                  {alert.type === 'missing' ? <Calendar size={20} /> : <AlertTriangle size={20} />}
+                </div>
+                <p className="text-sm font-bold tracking-tight">{alert.msg}</p>
+              </div>
+              <Link href={alert.type === 'missing' ? "/add" : "/transactions"} className="px-4 py-2 bg-white dark:bg-slate-800 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-sm hover:shadow-md transition-all active:scale-95">
+                  {alert.type === 'missing' ? "သွင်းရန်" : "စစ်ဆေးရန်"}
+              </Link>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* --- NEW: Tax Deadline Countdown Banner --- */}
       <div className="mb-10 bg-slate-900 p-6 rounded-[2.5rem] flex flex-col md:flex-row items-center justify-between shadow-2xl border border-slate-800">

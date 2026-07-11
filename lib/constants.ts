@@ -24,13 +24,55 @@ export const TAX_CATEGORIES = [
       info: "လစာထဲက အလုပ်ရှင် ဖြတ်ထားပြီးသား Federal/State Tax ပမာဏကို ထည့်ရန်" },
 
   // EXPENSES (DEDUCTIBLE)
+  // { 
+  //   label: "Produce & Raw Materials (COGS)", 
+  //   value: "produce_cogs", 
+  //   type: "expense",
+  //   line: "Schedule C - Part III (Line 36)",
+  //   info: "Inventory Costs: ဆိုင်အတွက်ဝယ်သော ဟင်းသီးဟင်းရွက်နှင့် ကုန်ကြမ်းများ (ဥပမာ - Tuna, Produce) ဖြစ်ပါတယ်။ ဒါတွေက အမြတ်ကို တိုက်ရိုက် လျှော့ချပေးပါတယ်။",
+  //   color: "#f59e0b"
+  // },
+  // { 
+  //   label: "Produce (Produce/Supplies)", 
+  //   value: "produce", 
+  //   type: "expense",
+  //   line: "Schedule C - Part III (Line 36)",
+  //   info: "Direct Supplies: ဆိုင်အတွက်ဝယ်သော ဟင်းသီးဟင်းရွက်၊ သခွားသီး စသည့် ကုန်ကြမ်းများ ဖြစ်ပါတယ်။ COGS အနေဖြင့် အခွန်ခုနှိမ်နိုင်ပါတယ်။",
+  //   color: "#fbbf24"
+  // },
   { 
-    label: "Produce & Raw Materials (COGS)", 
-    value: "produce_cogs", 
-    type: "expense",
-    line: "Schedule C - Part III (Line 36)",
-    info: "Inventory Costs: ဆိုင်အတွက်ဝယ်သော ဟင်းသီးဟင်းရွက်နှင့် ကုန်ကြမ်းများ (ဥပမာ - Tuna, Produce) ဖြစ်ပါတယ်။ ဒါတွေက အမြတ်ကို တိုက်ရိုက် လျှော့ချပေးပါတယ်။",
-    color: "#f59e0b"
+    label: "RAW (Tuna, Salmon, Crabsticks, Shrimp, Beef, etc.)", 
+    value: "sushi_raw", 
+    type: "expense", 
+    color: "#f43f5e", // အသားအရောင် (Rose)
+    line: "Part III - Line 36", 
+    info: "Tuna, Salmon, Crabsticks, Shrimp, Beef စသည့် ပင်လယ်စာနှင့် အသားများ။" 
+  },
+  { 
+    label: "DRY (Rice, Vinegar, Seaweed (Nori), SesameSeeds, etc.)", 
+    value: "sushi_dry", 
+    type: "expense", 
+    color: "#f59e0b", // ဆန်အရောင် (Amber)
+    line: "Part III - Line 36", 
+    info: "Rice, Vinegar, Seaweed (Nori), Sesame Seeds, Staples စသည့် အခြောက်အထည်များ။" 
+  },
+  { 
+    label: "COOLER (Produce & Sauces)", 
+    value: "sushi_cooler", 
+    type: "expense", 
+    color: "#06b6d4", // အအေးခန်းအရောင် (Cyan)
+    line: "Part III - Line 36", 
+    info: "Sauces, Cream cheese, Cucumber, Lettuce, Carrots, Vegetables စသည့် အအေးခန်းသုံးပစ္စည်းများ။" 
+  },
+
+  // --- STORE SUPPLIES (Line 18) ---
+  { 
+    label: "CONTAINERS (Packaging)", 
+    value: "sushi_containers", 
+    type: "expense", 
+    color: "#64748b", // မီးခိုးရောင် (Slate)
+    line: "Line 18", 
+    info: "Base/lid, Trays, Bowls, Cups, Gloves, Paper towels စသည့် ထုပ်ပိုးမှုနှင့် သုံးကုန်များ။" 
   },
   { 
     label: "Inventory Purchases", 
@@ -39,14 +81,6 @@ export const TAX_CATEGORIES = [
     line: "Schedule C - Part III (Line 36)",
     info: "Bulk Orders: Company များထံမှ ၂ လတစ်ခါ မှာယူရသော Raw, Cooked, Dry ပစ္စည်းများ ဖြစ်ပါတယ်။",
     color: "#0bf5bb"
-  },
-  { 
-    label: "Produce (Produce/Supplies)", 
-    value: "produce", 
-    type: "expense",
-    line: "Schedule C - Part III (Line 36)",
-    info: "Direct Supplies: ဆိုင်အတွက်ဝယ်သော ဟင်းသီးဟင်းရွက်၊ သခွားသီး စသည့် ကုန်ကြမ်းများ ဖြစ်ပါတယ်။ COGS အနေဖြင့် အခွန်ခုနှိမ်နိုင်ပါတယ်။",
-    color: "#fbbf24"
   },
   { 
     label: "Advertising", 

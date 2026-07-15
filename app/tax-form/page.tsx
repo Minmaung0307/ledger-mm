@@ -5,10 +5,11 @@ import Layout from '@/components/Layout';
 import { db, auth } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, query, where, onSnapshot, orderBy, doc, getDoc } from 'firebase/firestore'; // doc, getDoc ထည့်လိုက်ပါပြီ
-import { TAX_CATEGORIES } from '@/lib/constants';
+// import { TAX_CATEGORIES } from '@/lib/constants';
 import { Printer, FileCheck, Info } from 'lucide-react';
 
 export default function TaxFormWorksheet() {
+  const [taxYearType, setTaxYearType] = useState('calendar'); // 'calendar' (Jan-Dec) သို့မဟုတ် 'fiscal' (Jun-May)
   const [data, setData] = useState<any[]>([]);
   const [profile, setProfile] = useState<any>(null); // profile state ကို သတ်မှတ်လိုက်ပါပြီ
   const [loading, setLoading] = useState(true);
@@ -17,9 +18,21 @@ export default function TaxFormWorksheet() {
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       if (user) {
+        let start, end;
+
+      if (taxYearType === 'calendar') {
+        // လူကြီးမင်းရဲ့ LLC အတွက် (April မှာဆောင်မယ့်နှစ်)
+        start = new Date(selectedYear, 0, 1);
+        end = new Date(selectedYear, 11, 31, 23, 59, 59);
+      } else {
+        // သူငယ်ချင်းရဲ့ C-Corp အတွက် (August မှာဆောင်မယ့်နှစ်)
+        // မေလ ၃၁ မှာ နှစ်ချုပ်တယ်လို့ ယူဆပြီး တွက်ပါမယ်
+        start = new Date(selectedYear - 1, 5, 1); // ပြီးခဲ့တဲ့နှစ် ဇွန် ၁
+        end = new Date(selectedYear, 4, 31, 23, 59, 59); // ဒီနှစ် မေ ၃၁
+      }
         // ၁။ Transactions Data ဆွဲယူခြင်း
-        const start = new Date(selectedYear, 0, 1);
-        const end = new Date(selectedYear, 11, 31, 23, 59, 59);
+        // const start = new Date(selectedYear, 0, 1);
+        // const end = new Date(selectedYear, 11, 31, 23, 59, 59);
         const q = query(
           collection(db, "transactions"), 
           where("uid", "==", user.uid), 
@@ -46,7 +59,7 @@ export default function TaxFormWorksheet() {
       }
     });
     return () => unsubscribeAuth();
-  }, [selectedYear]);
+  }, [selectedYear, taxYearType]); // taxYearType ပြောင်းရင်လည်း data အသစ်ပြန်ဆွဲမယ်
 
   const getSum = (cat: string) => data.filter(d => d.category === cat).reduce((s, i) => s + i.amount, 0);
 
@@ -103,6 +116,21 @@ export default function TaxFormWorksheet() {
             <span className="text-3xl font-black text-emerald-600 print:text-black">${netProfit.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
           </div>
 
+          <div className="flex gap-4 mb-8 no-print">
+              <button 
+                  onClick={() => setTaxYearType('calendar')}
+                  className={`flex-1 p-4 rounded-2xl font-black text-xs transition-all shadow-md ${taxYearType === 'calendar' ? 'bg-emerald-600 text-white' : 'bg-white text-slate-400 border-2 border-slate-100'}`}
+              >
+                  MY LLC (JAN - DEC)
+              </button>
+              <button 
+                  onClick={() => setTaxYearType('fiscal')}
+                  className={`flex-1 p-4 rounded-2xl font-black text-xs transition-all shadow-md ${taxYearType === 'fiscal' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-400 border-2 border-slate-100'}`}
+              >
+                  C-CORP INC (JUN - MAY)
+              </button>
+          </div>
+
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100 print:bg-slate-50">
@@ -111,6 +139,7 @@ export default function TaxFormWorksheet() {
                 <th className="p-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Amount ($)</th>
               </tr>
             </thead>
+
             <tbody className="divide-y divide-slate-100">
               {taxLines.map((line, idx) => (
                 <tr key={idx} className="hover:bg-slate-50 transition print:hover:bg-white">

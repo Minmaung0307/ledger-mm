@@ -368,21 +368,41 @@ export default function TransactionsList() {
           </div>
         </div>
 
-        <div className="relative mb-8 group px-2 md:px-0">
-          <div className="absolute inset-y-0 left-6 flex items-center text-slate-300"><Search size={22} /></div>
-          <input type="text" placeholder="Search records..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-16 pr-6 py-5 border-2 border-slate-100 rounded-[1.8rem] focus:border-emerald-500 outline-none font-bold text-slate-900 bg-white shadow-sm transition-all text-lg"
-          />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 no-print">
-            <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black text-slate-400 uppercase">From:</span>
-                <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="flex-1 p-3 bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl font-bold text-sm" />
-            </div>
-            <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black text-slate-400 uppercase">To:</span>
-                <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="flex-1 p-3 bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl font-bold text-sm" />
+        {/* --- Search Box Area (မှန်ဘီလူးကို ညာဘက်သို့ ပို့ခြင်း) --- */}
+        <div className="relative mb-4 group px-2 md:px-0">
+            <input 
+                type="text" 
+                placeholder="Search records by name or amount..." 
+                value={searchTerm} 
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-6 pr-14 py-5 border-2 border-slate-100 dark:border-slate-800 rounded-[1.8rem] focus:border-emerald-500 outline-none font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-900 shadow-sm transition-all text-lg placeholder:text-slate-300"
+            />
+            {/* မှန်ဘီလူးအိုင်ကွန်ကို ညာဘက် (absolute right-0) မှာ ထားလိုက်ပါပြီ */}
+            <div className="absolute inset-y-0 right-6 flex items-center text-slate-300 group-focus-within:text-emerald-500 transition-colors">
+                <Search size={24} />
             </div>
         </div>
+
+        {/* --- Date Filters (အောက်က From/To အကွက်များ) --- */}
+        <div className="flex flex-col md:flex-row items-center gap-4 mb-8 no-print">
+            <div className="flex-1 flex items-center gap-2 w-full">
+                <span className="text-[10px] font-black text-slate-400 uppercase min-w-[40px]">From:</span>
+                <input 
+                    type="date" 
+                    value={startDate} 
+                    onChange={e => setStartDate(e.target.value)} 
+                    className="flex-1 p-3 bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl font-bold text-slate-900 dark:text-white focus:border-emerald-500 outline-none" 
+                />
+            </div>
+            <div className="flex-1 flex items-center gap-2 w-full">
+                <span className="text-[10px] font-black text-slate-400 uppercase min-w-[30px]">To:</span>
+                <input 
+                    type="date" 
+                    value={endDate} 
+                    onChange={e => setEndDate(e.target.value)} 
+                    className="flex-1 p-3 bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl font-bold text-slate-900 dark:text-white focus:border-emerald-500 outline-none" 
+                />
+            </div>
         </div>
 
         {/* --- Bulk Action Floating Bar --- */}

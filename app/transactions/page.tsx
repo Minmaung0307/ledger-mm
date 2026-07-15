@@ -26,6 +26,9 @@ export default function TransactionsList() {
 
   // --- Bulk Operation States ---
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all');
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
@@ -170,12 +173,12 @@ export default function TransactionsList() {
 
       // ၃။ Zip ဖိုင်ကို ထုတ်ပေးမယ်
       const content = await zip.generateAsync({ type: "blob" });
-      const url = window.URL.createObjectURL(content);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Business_Audit_Package_${new Date().getFullYear()}.zip`;
-      a.click();
-      window.URL.revokeObjectURL(url);
+      // const url = window.URL.createObjectURL(content);
+      // const a = document.createElement('a');
+      // a.href = url;
+      // a.download = `Business_Audit_Package_${new Date().getFullYear()}.zip`;
+      // a.click();
+      // window.URL.revokeObjectURL(url);
       saveAs(content, `Business_Audit_Package_${new Date().getFullYear()}.zip`);
   };
 
@@ -220,7 +223,7 @@ export default function TransactionsList() {
 
   const handleUpdateTransaction = async (e: React.FormEvent) => {
       e.preventDefault();
-      if (!editItem?.id) return;
+      if (!editItem?.id || isSaving) return;
       setIsSaving(true);
 
       try {
@@ -281,6 +284,7 @@ export default function TransactionsList() {
 
         // ၄။ အကုန်လုံးပြီးမှ Modal ပိတ်ပြီး UI refresh လုပ်မယ်
         setEditItem(null);
+        alert("Updated successfully!");
         setIsRecurring(false);
         window.location.reload(); 
         
@@ -299,25 +303,35 @@ export default function TransactionsList() {
   // });
 
     const filtered = transactions.filter(t => {
-        const searchLower = searchTerm.toLowerCase();
-        
-        // ၁။ ဆိုင်နာမည်နဲ့ ရှာမယ်
-        const matchesDescription = t.description.toLowerCase().includes(searchLower);
-        
-        // ၂။ အမျိုးအစား (Category) နဲ့ ရှာမယ်
-        const matchesCategory = t.category.toLowerCase().includes(searchLower);
-        
-        // ၃။ ငွေပမာဏ (Amount) နဲ့ ရှာမယ် (ဂဏန်းကို စာသားပြောင်းပြီး ရှာခိုင်းတာပါ)
-        const matchesAmount = t.amount.toString().includes(searchTerm);
+      const searchLower = searchTerm.toLowerCase();
+      const d = t.displayDate;
+      
+      // ၁။ ဆိုင်နာမည် သို့မဟုတ် အမျိုးအစားနဲ့ ရှာမယ်
+      const matchesText = t.description.toLowerCase().includes(searchLower) || 
+                          t.category.toLowerCase().includes(searchLower);
+      
+      // ၂။ ငွေပမာဏ (Amount) နဲ့ ရှာမယ် (ဂဏန်းကို စာသားပြောင်းပြီး ရှာခိုင်းတာပါ)
+      const matchesAmount = t.amount.toString().includes(searchTerm);
 
-        // အပေါ်က ၃ ခုထဲက တစ်ခုခုနဲ့ ကိုက်ညီရင် ပြမယ်
-        const matchesSearch = matchesDescription || matchesCategory || matchesAmount;
+      // ၃။ အမျိုးအစား (Income/Expense) စစ်ထုတ်ခြင်း
+      const isInc = t.category === 'income' || t.category === 'w2_income';
+      const matchesType = filterType === 'all' ? true : (filterType === 'income' ? isInc : !isInc);
 
-        // Receipt Toggle အတွက် logic (အရင်အတိုင်းပဲ ထားပါ)
-        const matchesReceiptToggle = showOnlyReceipts ? (t.receiptUrl && t.receiptUrl !== "") : true;
+      // ၄။ ရက်စွဲအလိုက် စစ်ထုတ်ခြင်း
+      let matchesDate = true;
+      if (startDate) matchesDate = matchesDate && d >= new Date(startDate);
+      if (endDate) {
+          const e = new Date(endDate);
+          e.setHours(23,59,59);
+          matchesDate = matchesDate && d <= e;
+      }
 
-        return matchesSearch && matchesReceiptToggle;
-    });
+      // အားလုံးကို ပေါင်းစပ်စစ်ထုတ်မယ်
+      const matchesSearch = matchesText || matchesAmount;
+      const matchesReceipt = showOnlyReceipts ? (t.receiptUrl && t.receiptUrl !== "") : true;
+
+      return matchesSearch && matchesReceipt && matchesType && matchesDate;
+  });
 
   return (
     <Layout>
@@ -359,6 +373,16 @@ export default function TransactionsList() {
           <input type="text" placeholder="Search records..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-16 pr-6 py-5 border-2 border-slate-100 rounded-[1.8rem] focus:border-emerald-500 outline-none font-bold text-slate-900 bg-white shadow-sm transition-all text-lg"
           />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 no-print">
+            <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black text-slate-400 uppercase">From:</span>
+                <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="flex-1 p-3 bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl font-bold text-sm" />
+            </div>
+            <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black text-slate-400 uppercase">To:</span>
+                <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="flex-1 p-3 bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl font-bold text-sm" />
+            </div>
+        </div>
         </div>
 
         {/* --- Bulk Action Floating Bar --- */}
@@ -525,8 +549,11 @@ export default function TransactionsList() {
                     </label>
                 </div>
 
-                <button type="submit" className="w-full bg-slate-900 text-white p-6 rounded-2xl font-black uppercase tracking-[0.2em] shadow-xl hover:bg-emerald-600 transition-all active:scale-95">
-                  APPLY CHANGES & SAVE
+                <button 
+                type="submit" 
+                disabled={isSaving} // သိမ်းနေတုန်းမှာ ခလုတ်ကို နှိပ်လို့မရအောင် ပိတ်ထားမယ်
+                className="w-full bg-slate-900 text-white p-6 rounded-2xl font-black uppercase tracking-[0.2em] shadow-xl hover:bg-emerald-600 transition-all active:scale-95">
+                  {isSaving ? "SAVING..." : "APPLY CHANGES & SAVE"}
                 </button>
               </form>
             </div>

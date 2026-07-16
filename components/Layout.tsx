@@ -131,6 +131,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         { icon: <FileBarChart size={20}/>, label: 'Tax Reports (P&L)', href: '/report' },
         { icon: <List size={20}/>, label: 'Chart of Accounts', href: '/accounts' },
         { icon: <FileText size={20}/>, label: 'Tax Filing Prep', href: '/tax-form' },
+        { icon: <List size={20}/>, label: 'Analytics Matrix', href: '/analytics/matrix' },
       ]
     },
     {

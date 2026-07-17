@@ -428,56 +428,75 @@ export default function TransactionsList() {
                 const isSelected = selectedIds.includes(item.id);
 
                 return (
-                  <div key={item.id} className={`p-4 md:px-8 md:py-3 flex justify-between items-center transition relative 
-                    group bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/50 border-b last:border-0 border-slate-50 dark:border-slate-700
-                    ${isSelected ? 'bg-emerald-50 dark:bg-emerald-900/30' : 
+                  <div key={item.id} className={`p-4 md:px-6 md:py-3 flex flex-col md:flex-row justify-between items-start md:items-center transition-all relative 
+                    group bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/40 border-b last:border-0 border-slate-50 dark:border-slate-700
+                    ${isSelected ? 'bg-emerald-50/50 dark:bg-emerald-900/20' : 
                       hasDuplicate ? 'bg-amber-50/20 dark:bg-amber-900/10' : ''}`}>
                     
+                    {/* Duplicate Alert - ပိုပါးသွားပါပြီ */}
                     {hasDuplicate && (
-                      <div className="absolute top-0.5 left-1/2 -translate-x-1/2 bg-white dark:bg-slate-900 border border-amber-200 text-amber-600 px-3 py-0.5 rounded-full font-black text-[7px] flex items-center gap-1 z-10 animate-pulse shadow-sm">
-                        <AlertTriangle size={8} /> DUPLICATE FOUND <button onClick={() => setDismissedAlerts([...dismissedAlerts, item.id])} className="ml-1 border-l pl-1 font-bold hover:text-slate-900">DISMISS</button>
+                      <div className="absolute top-0.5 left-1/2 -translate-x-1/2 bg-white dark:bg-slate-900 border border-amber-100 text-amber-600 px-3 py-0.5 rounded-full font-bold text-[7px] flex items-center gap-1 z-10 shadow-sm animate-pulse">
+                        <AlertTriangle size={8} /> DUPLICATE <button onClick={() => setDismissedAlerts([...dismissedAlerts, item.id])} className="ml-1 border-l pl-1 font-bold hover:text-slate-900 uppercase">Dismiss</button>
                       </div>
                     )}
 
-                    <div className="flex-1 flex items-center gap-4">
-                      <button onClick={() => toggleSelect(item.id)} className={`transition-colors ${isSelected ? 'text-emerald-500' : 'text-slate-200 dark:text-slate-600'}`}>
-                        {isSelected ? <CheckSquare size={20} /> : <Square size={20} />}
-                      </button>
-                      <button onClick={() => toggleVerify(item.id, item.verified)} className={`p-2 rounded-xl transition-all ${item.verified ? 'bg-emerald-100 text-emerald-600 shadow-inner' : 'bg-slate-50 dark:bg-slate-900 text-slate-200 dark:text-slate-700'}`}><CheckCircle2 size={20} /></button>
-                      <div>
-                        <p className="font-black text-lg text-slate-900 dark:text-white tracking-tight leading-tight">{item.description}</p>
-                        <div className="flex flex-wrap items-center gap-2 mt-0.5">
-                          <span className={`text-[8px] font-black px-2 py-0.5 rounded-full uppercase ${isInc ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>{item.category.replace('_', ' ')}</span>
-                          <span className="text-[8px] font-black px-2 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-500 rounded-full uppercase italic">{item.bankAccount || 'Other'}</span>
-                          <span className="text-[9px] font-bold text-slate-300">{(item.transactionDate?.toDate?.() || item.date?.toDate?.() || new Date()).toLocaleDateString()}</span>
+                    {/* ဘယ်ဘက်ခြမ်း: Selection + Info */}
+                    <div className="flex items-start gap-3 w-full md:w-auto">
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <button onClick={() => toggleSelect(item.id)} className={`transition-colors ${isSelected ? 'text-emerald-500' : 'text-slate-200 dark:text-slate-600'}`}>
+                          {isSelected ? <CheckSquare size={18} /> : <Square size={18} />}
+                        </button>
+                        <button onClick={() => toggleVerify(item.id, item.verified)} className={`p-1.5 rounded-lg transition-all ${item.verified ? 'bg-emerald-100 text-emerald-600 shadow-sm' : 'bg-slate-50 dark:bg-slate-900 text-slate-200 dark:text-slate-700'}`}>
+                          <CheckCircle2 size={18} />
+                        </button>
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-base md:text-lg text-slate-900 dark:text-white tracking-tight leading-tight truncate">
+                          {item.description}
+                        </p>
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1">
+                          <span className={`text-[8px] font-bold px-2 py-0.5 rounded-md uppercase tracking-tight ${isInc ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 border border-emerald-100 dark:border-emerald-800' : 'bg-rose-50 dark:bg-rose-900/20 text-rose-600 border border-rose-100 dark:border-rose-800'}`}>
+                            {item.category.replace('_', ' ')}
+                          </span>
+                          <span className="text-[8px] font-bold px-2 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-500 rounded-md italic">
+                            {item.bankAccount || 'Other'}
+                          </span>
+                          <span className="text-[9px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-tighter">
+                            {item.displayDate.toLocaleDateString()}
+                          </span>
+                          {item.receiptUrl && (
+                            <a href={item.receiptUrl} target="_blank" rel="noreferrer" className="text-emerald-500 hover:text-emerald-600 transition-colors ml-1">
+                              <ImageIcon size={14} />
+                            </a>
+                          )}
                         </div>
                       </div>
-                      {item.receiptUrl && <a href={item.receiptUrl} target="_blank" className="text-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 p-2 rounded-xl hover:bg-emerald-500 hover:text-white transition shadow-sm"><ImageIcon size={16} /></a>}
                     </div>
 
-                    <div className="flex items-center gap-4">
-                      <p className={`text-lg md:text-xl font-extrabold tracking-tighter ${isInc ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                    {/* ညာဘက်ခြမ်း: Amount + Actions (Mobile မှာ အောက်တန်းဆင်းသွားပါမယ်) */}
+                    <div className="flex items-center justify-between w-full md:w-auto mt-3 md:mt-0 border-t border-slate-50 dark:border-slate-700 pt-2 md:pt-0 md:border-0">
+                      <p className={`text-lg md:text-xl font-bold tracking-tighter ${isInc ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
                         {isInc ? '+' : '-'}${Number(item.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}
                       </p>
                       
-                      {/* --- ခလုတ်တွေကို အမြဲတမ်း ပေါ်နေအောင် opacity-0 ကို ဖြုတ်လိုက်ပါပြီ --- */}
-                      <div className="flex items-center gap-1 transition-all">
+                      <div className="flex items-center gap-1 ml-4">
                         <button 
                             onClick={() => { 
-                                const d = item.transactionDate?.toDate?.() || item.date?.toDate?.() || new Date(); 
+                                const d = item.displayDate; 
                                 setEditItem({...item, tempDate: d.toISOString().split('T')[0]}); 
                             }} 
-                            className="text-slate-300 dark:text-slate-600 hover:text-emerald-500 p-2 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-xl transition"
+                            className="text-slate-300 dark:text-slate-600 hover:text-emerald-500 p-2 transition-colors rounded-lg"
                             title="Edit"
                         >
-                            <Edit3 size={18} />
+                            <Edit3 size={16} />
                         </button>
                         <button 
                             onClick={() => handleDelete(item.id)} 
-                            className="text-slate-300 dark:text-slate-600 hover:text-rose-600 p-2 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition"
+                            className="text-slate-300 dark:text-slate-600 hover:text-rose-600 p-2 transition-colors rounded-lg"
                             title="Delete"
                         >
-                            <Trash2 size={18} />
+                            <Trash2 size={16} />
                         </button>
                       </div>
                     </div>

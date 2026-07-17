@@ -102,32 +102,20 @@ export default function Payroll() {
           ) : (
             contractors.map(c => (
               <div key={c.id} className="bg-white dark:bg-slate-800 p-6 rounded-[2.5rem] shadow-xl border-2 border-slate-50 dark:border-slate-700 flex justify-between items-center group transition-all hover:border-emerald-500">
-                <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 bg-slate-50 dark:bg-slate-900 rounded-2xl flex items-center justify-center font-black text-slate-400 text-xl border-2 border-slate-100 dark:border-slate-700">
-                        {c.name?.charAt(0) || 'C'}
+                {/* နာမည်နှင့် ပုံကို Link ဖြင့် အုပ်လိုက်ပါသည် */}
+                <Link href={`/payroll/view/${c.id}`} className="flex items-center gap-4 flex-1 cursor-pointer">
+                    <div className="w-14 h-14 bg-slate-50 dark:bg-slate-900 rounded-2xl flex items-center justify-center font-black text-slate-400 text-xl border-2 border-slate-100 dark:border-slate-700 overflow-hidden shadow-inner">
+                        {c.photoUrl ? <img src={c.photoUrl} className="w-full h-full object-cover" /> : (c.name?.charAt(0) || 'C')}
                     </div>
                     <div>
-                        <p className="font-black text-slate-900 dark:text-white text-xl tracking-tight">{c.name}</p>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{c.taxId || 'No Tax ID'}</p>
+                        <p className="font-black text-slate-900 dark:text-white text-xl tracking-tight group-hover:text-emerald-600 transition-colors underline decoration-transparent group-hover:decoration-emerald-500 underline-offset-4">{c.name}</p>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{c.phone || 'No Phone'}</p>
                     </div>
-                </div>
+                </Link>
                 
                 <div className="flex items-center gap-3">
-                    {/* ပြင်ဆင်ချက် ၄: Archive ခလုတ်လေး ထည့်ပေးလိုက်ပါပြီ */}
-                    <button 
-                        onClick={() => handleArchive(c.id)}
-                        className="p-3 text-slate-200 hover:text-rose-500 transition-colors"
-                        title="Archive Employee"
-                    >
-                        <UserX size={20} />
-                    </button>
-
-                    <button 
-                        onClick={() => { setSelectedContractor(c); setShowModal(true); }}
-                        className="flex items-center gap-2 bg-emerald-600 text-white px-6 py-3 rounded-xl font-black text-xs hover:bg-slate-900 transition shadow-lg"
-                    >
-                        <DollarSign size={16}/> PAY
-                    </button>
+                    <button onClick={() => handleArchive(c.id)} className="p-3 text-slate-200 hover:text-rose-500 transition-colors"><UserX size={20} /></button>
+                    <button onClick={() => { setSelectedContractor(c); setShowModal(true); }} className="flex items-center gap-2 bg-emerald-600 text-white px-6 py-3 rounded-xl font-black text-xs hover:bg-slate-900 transition shadow-lg tracking-widest">PAY</button>
                 </div>
               </div>
             ))

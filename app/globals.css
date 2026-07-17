@@ -123,3 +123,21 @@ body {
 
 .dark .text-blue-900 { color: #dbeafe !important; } /* Excel table စာသား မြင်ရအောင် */
 .dark .bg-blue-50 { background-color: #1e293b !important; color: #f8fafc !important; } /* Guide box မြင်ရအောင် */
+
+/* Mobile မှာ Padding လျှော့ပြီး Desktop မှာမှ တိုးမယ် */
+.main-content {
+  @apply p-4 md:p-10 lg:p-12;
+}
+
+/* ဇယားကွက်တွေ Mobile မှာ ဘေးတိုက် Scroll ဆွဲလို့ရအောင် */
+.table-container {
+  @apply overflow-x-auto w-full -mx-4 px-4 md:mx-0 md:px-0;
+}
+
+/* Card ဒီဇိုင်းများကို Mobile မှာ ပါးပါးလေး ပြောင်းမယ် */
+@media (max-width: 768px) {
+  .rounded-\[3rem\] {
+    border-radius: 1.5rem !important;
+  }
+  h2 { font-size: 1.5rem !important; }
+}

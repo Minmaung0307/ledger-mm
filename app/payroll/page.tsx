@@ -8,6 +8,7 @@ import { collection, query, where, onSnapshot, addDoc, serverTimestamp, doc, upd
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Users, UserPlus, DollarSign, X, UserX, Edit3, Camera, Loader2, Mail, Phone, MapPin, Calendar, Award } from 'lucide-react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation'; 
 
 export default function Contractors() {
   const [contractors, setContractors] = useState<any[]>([]);
@@ -32,6 +33,7 @@ export default function Contractors() {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [payAmount, setPayAmount] = useState('');
+  const pathname = usePathname();
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
@@ -88,10 +90,44 @@ export default function Contractors() {
     } catch (err) { alert("Error"); } finally { setIsSaving(false); }
   };
 
+  const handlePay = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedPerson || !payAmount || isSaving) return;
+    setIsSaving(true);
+    try {
+      await addDoc(collection(db, "transactions"), {
+        description: `W-2 Salary: ${selectedPerson.name}`,
+        amount: parseFloat(payAmount),
+        category: 'w2_wages',
+        date: serverTimestamp(),
+        uid: auth.currentUser?.uid,
+        verified: false
+      });
+      alert("Success! Salary recorded in Ledger.");
+      setShowPayModal(false);
+      setPayAmount('');
+    } catch (err) {
+      alert("Error recording payment");
+    } finally {
+      setIsSaving(false);
+    }
+};
+
   const resetForm = () => {
     setName(''); setEmail(''); setPhone(''); setAddress(''); setTaxId(''); setSalary('');
     setJoinDate(new Date().toISOString().split('T')[0]); setInternalNotes(''); setFile(null); setPreview(null);
   };
+
+  const handleArchive = async (id: string) => {
+      if (confirm("ဒီလူက အလုပ်ထွက်သွားပြီလား? Archive လုပ်လိုက်ရင် စာရင်းဟောင်းတွေ မပျောက်ပေမယ့် ဒီ List ထဲမှာ မပေါ်တော့ပါဘူး။")) {
+        try {
+          const collectionName = pathname.includes('employees') ? "employees" : "contractors";
+          await updateDoc(doc(db, collectionName, id), { status: 'archived' });
+        } catch (err) {
+          alert("Error archiving user");
+        }
+      }
+    };
 
   return (
     <Layout>
@@ -115,9 +151,26 @@ export default function Contractors() {
               </Link>
               <div className="flex items-center gap-2">
                   <button onClick={() => {
-                      const d = c.joinDate?.toDate() || new Date();
-                      setEditItem({ ...c, tempJoinDate: d.toISOString().split('T')[0] });
-                  }} className="p-3 text-slate-300 hover:text-emerald-500 transition-colors"><Edit3 size={20}/></button>
+                    const d = c.joinDate?.toDate?.() || c.date?.toDate?.() || new Date();
+                    setEditItem({ 
+                        ...c, 
+                        id: c.id, 
+                        tempJoinDate: d.toISOString().split('T')[0],
+                        phone: c.phone || "",    // Phone ပါအောင် ထည့်လိုက်ပါတယ်
+                        taxId: c.taxId || "",    // SSN ပါအောင် ထည့်လိုက်ပါတယ်
+                        address: c.address || "", // Address ပါအောင် ထည့်လိုက်ပါတယ်
+                        internalNotes: c.internalNotes || "" // Notes ပါအောင် ထည့်လိုက်ပါတယ်
+                    });
+                }} className="p-3 text-slate-300 hover:text-emerald-500 transition-colors">
+                    <Edit3 size={20}/>
+                </button>
+                  <button 
+                      onClick={() => handleArchive(c.id)} 
+                      className="p-3 text-slate-300 dark:text-slate-600 hover:text-rose-500 transition-colors"
+                      title="Archive Personnel"
+                  >
+                      <UserX size={20} />
+                  </button>
                   <button onClick={() => { setSelectedPerson(c); setShowPayModal(true); }} className="bg-emerald-600 text-white px-5 py-3 rounded-xl font-black text-xs shadow-lg active:scale-95">PAY</button>
               </div>
             </div>
@@ -187,6 +240,32 @@ export default function Contractors() {
                     <textarea value={editItem.internalNotes} onChange={e => setEditItem({...editItem, internalNotes: e.target.value})} className="w-full h-24 p-4 bg-amber-50 dark:bg-amber-950/20 border-2 border-amber-100 rounded-2xl italic font-bold" />
                     <button type="submit" disabled={isSaving} className="w-full bg-slate-900 text-white p-5 rounded-2xl font-black uppercase shadow-xl hover:bg-blue-600 transition-all">APPLY CHANGES</button>
                 </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showPayModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-800 w-full max-w-md rounded-[3rem] shadow-2xl p-10 relative animate-in zoom-in duration-200">
+            <button onClick={() => setShowPayModal(false)} className="absolute top-8 right-8 text-slate-400 hover:text-slate-900 bg-slate-50 dark:bg-slate-700 p-2 rounded-full"><X size={20}/></button>
+            <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2 uppercase italic">Issue Payment</h3>
+            <p className="text-slate-500 font-medium mb-10 italic">Paying to: <span className="text-emerald-500 font-black">{selectedPerson?.name}</span></p>
+            
+            <form onSubmit={handlePay} className="space-y-6">
+              <div className="relative">
+                <span className="absolute left-5 top-1/2 -translate-y-1/2 text-2xl font-black text-slate-300">$</span>
+                <input 
+                  type="number" step="0.01" autoFocus 
+                  value={payAmount} onChange={e => setPayAmount(e.target.value)} 
+                  placeholder="0.00" 
+                  className="w-full pl-12 pr-6 py-6 bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-700 rounded-3xl font-black text-4xl text-slate-900 dark:text-white focus:border-emerald-500 outline-none transition-all" 
+                  required 
+                />
+              </div>
+              <button type="submit" className="w-full bg-emerald-600 text-white p-6 rounded-full font-black uppercase tracking-widest shadow-xl hover:bg-slate-900 transition-all flex items-center justify-center gap-3 active:scale-95 text-xs">
+                <DollarSign size={24}/> CONFIRM & RECORD
+              </button>
             </form>
           </div>
         </div>

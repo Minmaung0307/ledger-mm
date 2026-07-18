@@ -6,7 +6,7 @@ import { db, auth, storage } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, query, where, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { Users, UserPlus, DollarSign, X, Edit3, Camera, Loader2, UserX, Award, Calendar } from 'lucide-react';
+import { Users, UserPlus, DollarSign, X, Edit3, Camera, Loader2, UserX, Award, Calendar, RotateCcw } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -35,6 +35,7 @@ export default function Employees() {
   const [preview, setPreview] = useState<string | null>(null);
   const [payAmount, setPayAmount] = useState('');
   const pathname = usePathname();
+  const [showArchived, setShowArchived] = useState(false);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
@@ -42,7 +43,7 @@ export default function Employees() {
         const q = query(collection(db, "employees"), where("uid", "==", user.uid));
         onSnapshot(q, (snapshot) => {
           const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
-          setEmployees(items.filter(i => i.status !== 'archived'));
+          setEmployees(items);
           setLoading(false);
         });
       }
@@ -130,17 +131,40 @@ export default function Employees() {
     }
   };
 
+  const handleRestore = async (id: string) => {
+    if (confirm("ဒီလူကို စာရင်းထဲ ပြန်ထည့်မှာ သေချာပါသလား?")) {
+      try {
+        const collectionName = pathname.includes('employees') ? "employees" : "contractors";
+        await updateDoc(doc(db, collectionName, id), { status: 'active' });
+        alert("Restored successfully!");
+      } catch (err) { alert("Error restoring user"); }
+    }
+  };
+
   return (
     <Layout>
       <div className="pt-4 pb-40 px-4 max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-10">
           <h2 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">Employees (W-2)</h2>
+          <div className="mt-4 no-print">
+          <button 
+            onClick={() => setShowArchived(!showArchived)}
+            className={`px-5 py-2 rounded-xl font-black text-[10px] tracking-widest transition-all active:scale-95 flex items-center gap-2 ${showArchived ? 'bg-amber-500 text-white shadow-lg' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}
+          >
+            {showArchived ? <><RotateCcw size={14}/> VIEWING ARCHIVED</> : "VIEW ARCHIVED STAFF"}
+          </button>
+      </div>
           <button onClick={() => setShowAddModal(true)} className="bg-emerald-600 text-white p-4 rounded-2xl shadow-xl active:scale-95 transition-all"><UserPlus size={24}/></button>
         </div>
 
         <div className="grid grid-cols-1 gap-4">
-          {employees.map(emp => (
-            <div key={emp.id} className="bg-white dark:bg-slate-800 p-6 rounded-[2.5rem] shadow-xl border-2 border-slate-50 dark:border-slate-700 flex justify-between items-center group transition-all hover:border-emerald-500">
+          {/* စစ်ထုတ်ထားသော စာရင်းကို သုံးပါမည် */}
+          {employees
+            .filter(emp => showArchived ? emp.status === 'archived' : emp.status !== 'archived')
+            .map(emp => (
+            <div key={emp.id} className={`bg-white dark:bg-slate-800 p-6 rounded-[2.5rem] shadow-xl border-2 flex justify-between items-center group transition-all ${showArchived ? 'border-amber-100 opacity-80' : 'hover:border-emerald-500 border-slate-50 dark:border-slate-700'}`}>
+                
+                {/* Profile Link Area (အရင်အတိုင်းပဲ) */}
                 <Link href={`/payroll/view/${emp.id}`} className="flex items-center gap-4 flex-1">
                     <div className="w-14 h-14 bg-slate-50 dark:bg-slate-900 rounded-2xl flex items-center justify-center font-black text-slate-400 text-xl border-2 border-slate-100 dark:border-slate-700 shadow-inner overflow-hidden">
                         {emp.photoUrl ? <img src={emp.photoUrl} className="w-full h-full object-cover" /> : emp.name?.charAt(0)}
@@ -150,34 +174,40 @@ export default function Employees() {
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{emp.position || 'Staff'}</p>
                     </div>
                 </Link>
+
+                {/* Buttons Section (Archived mode ပေါ်မူတည်ပြီး ပြောင်းလဲမည်) */}
                 <div className="flex items-center gap-2">
-                    <button onClick={() => {
-                      const d = emp.joinDate?.toDate?.() || emp.date?.toDate?.() || new Date();
-                      setEditItem({ 
-                          ...emp, 
-                          id: emp.id, 
-                          tempJoinDate: d.toISOString().split('T')[0],
-                          phone: emp.phone || "",
-                          email: emp.email || "",
-                          address: emp.address || "",
-                          taxId: emp.taxId || "", // SSN ပြန်ပါလာပါပြီ
-                          internalNotes: emp.internalNotes || "", // Notes ပြန်ပါလာပါပြီ
-                          salary: emp.salary || ""
-                      });
-                  }} className="p-3 text-slate-300 hover:text-emerald-500 transition-colors">
-                      <Edit3 size={20} />
-                  </button>
-                    <button 
-                        onClick={() => handleArchive(emp.id)} 
-                        className="p-3 text-slate-300 dark:text-slate-600 hover:text-rose-500 transition-colors"
-                        title="Archive Employee"
-                    >
-                        <UserX size={18} />
-                    </button>
-                    <button onClick={() => { setSelectedPerson(emp); setShowPayModal(true); }} className="bg-slate-900 text-white px-5 py-3 rounded-xl font-black text-xs shadow-lg active:scale-95">PAY</button>
+                    {showArchived ? (
+                        // --- Restore Button (Archived ကြည့်နေချိန်မှာပဲ ပေါ်မယ်) ---
+                        <button 
+                          onClick={() => handleRestore(emp.id)}
+                          className="flex items-center gap-2 bg-emerald-600 text-white px-6 py-3 rounded-xl font-black text-[10px] shadow-lg hover:bg-slate-900 transition-all active:scale-95"
+                        >
+                          <RotateCcw size={14}/> RESTORE STAFF
+                        </button>
+                    ) : (
+                        // --- ပုံမှန် Edit, Archive, Pay ခလုတ်များ ---
+                        <>
+                          <button onClick={() => {
+                              const d = emp.joinDate?.toDate?.() || emp.date?.toDate?.() || new Date();
+                              setEditItem({ ...emp, id: emp.id, tempJoinDate: d.toISOString().split('T')[0], 
+                                phone: emp.phone || "", email: emp.email || "", address: emp.address || "", 
+                                taxId: emp.taxId || "", internalNotes: emp.internalNotes || "", salary: emp.salary || ""
+                              });
+                          }} className="p-3 text-slate-300 hover:text-emerald-500 transition-colors"><Edit3 size={20} /></button>
+                          
+                          <button onClick={() => handleArchive(emp.id)} className="p-3 text-slate-300 dark:text-slate-600 hover:text-rose-500 transition-colors" title="Archive"><UserX size={18} /></button>
+                          
+                          <button onClick={() => { setSelectedPerson(emp); setShowPayModal(true); }} className="bg-slate-900 text-white px-5 py-3 rounded-xl font-black text-xs shadow-lg active:scale-95">PAY</button>
+                        </>
+                    )}
                 </div>
             </div>
           ))}
+          {/* စာရင်းမရှိလျှင် ပြမည့် Empty State */}
+          {employees.filter(emp => showArchived ? emp.status === 'archived' : emp.status !== 'archived').length === 0 && (
+              <p className="p-20 text-center font-bold text-slate-300 uppercase italic">No records to show here.</p>
+          )}
         </div>
       </div>
 

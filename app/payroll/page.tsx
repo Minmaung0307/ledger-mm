@@ -6,7 +6,7 @@ import { db, auth, storage } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, query, where, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { Users, UserPlus, DollarSign, X, UserX, Edit3, Camera, Loader2, Mail, Phone, MapPin, Calendar, Award } from 'lucide-react';
+import { Users, UserPlus, DollarSign, X, UserX, Edit3, Camera, Loader2, Mail, Phone, MapPin, Calendar, Award, RotateCcw } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation'; 
 
@@ -34,6 +34,7 @@ export default function Contractors() {
   const [preview, setPreview] = useState<string | null>(null);
   const [payAmount, setPayAmount] = useState('');
   const pathname = usePathname();
+  const [showArchived, setShowArchived] = useState(false);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
@@ -41,7 +42,7 @@ export default function Contractors() {
         const q = query(collection(db, "contractors"), where("uid", "==", user.uid));
         onSnapshot(q, (snapshot) => {
           const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
-          setContractors(items.filter(i => i.status !== 'archived'));
+          setContractors(items);
           setLoading(false);
         });
       }
@@ -129,52 +130,84 @@ export default function Contractors() {
       }
     };
 
+    const handleRestore = async (id: string) => {
+    if (confirm("ဒီလူကို စာရင်းထဲ ပြန်ထည့်မှာ သေချာပါသလား?")) {
+      try {
+        const collectionName = pathname.includes('employees') ? "employees" : "contractors";
+        await updateDoc(doc(db, collectionName, id), { status: 'active' });
+        alert("Restored successfully!");
+      } catch (err) { alert("Error restoring user"); }
+    }
+  };
+
   return (
     <Layout>
       <div className="pt-4 pb-40 px-4 max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-10">
           <h2 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">Contractors (1099)</h2>
+          <div className="mt-4 no-print">
+            <button 
+              onClick={() => setShowArchived(!showArchived)}
+              className={`px-5 py-2 rounded-xl font-black text-[10px] tracking-widest transition-all active:scale-95 flex items-center gap-2 ${showArchived ? 'bg-amber-500 text-white shadow-lg' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}
+            >
+              {showArchived ? <><RotateCcw size={14}/> VIEWING ARCHIVED</> : "VIEW ARCHIVED CONTRACTORS"}
+            </button>
+        </div>
           <button onClick={() => setShowAddModal(true)} className="bg-slate-900 text-white p-4 rounded-2xl shadow-xl active:scale-95 transition-all"><UserPlus size={24}/></button>
         </div>
 
         <div className="grid grid-cols-1 gap-4">
-          {contractors.map(c => (
-            <div key={c.id} className="bg-white dark:bg-slate-800 p-6 rounded-[2.5rem] shadow-xl border-2 border-slate-50 dark:border-slate-700 flex justify-between items-center group transition-all hover:border-emerald-500">
-              <Link href={`/payroll/view/${c.id}`} className="flex items-center gap-4 flex-1">
-                  <div className="w-16 h-16 bg-slate-50 dark:bg-slate-900 rounded-2xl flex items-center justify-center overflow-hidden border-2 border-slate-100 dark:border-slate-700">
-                      {c.photoUrl ? <img src={c.photoUrl} className="w-full h-full object-cover" /> : <Users size={30} className="text-slate-300"/>}
-                  </div>
-                  <div>
-                      <p className="font-black text-xl text-slate-900 dark:text-white">{c.name}</p>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{c.phone || 'No Phone'}</p>
-                  </div>
-              </Link>
-              <div className="flex items-center gap-2">
-                  <button onClick={() => {
-                    const d = c.joinDate?.toDate?.() || c.date?.toDate?.() || new Date();
-                    setEditItem({ 
-                        ...c, 
-                        id: c.id, 
-                        tempJoinDate: d.toISOString().split('T')[0],
-                        phone: c.phone || "",    // Phone ပါအောင် ထည့်လိုက်ပါတယ်
-                        taxId: c.taxId || "",    // SSN ပါအောင် ထည့်လိုက်ပါတယ်
-                        address: c.address || "", // Address ပါအောင် ထည့်လိုက်ပါတယ်
-                        internalNotes: c.internalNotes || "" // Notes ပါအောင် ထည့်လိုက်ပါတယ်
-                    });
-                }} className="p-3 text-slate-300 hover:text-emerald-500 transition-colors">
-                    <Edit3 size={20}/>
-                </button>
-                  <button 
-                      onClick={() => handleArchive(c.id)} 
-                      className="p-3 text-slate-300 dark:text-slate-600 hover:text-rose-500 transition-colors"
-                      title="Archive Personnel"
-                  >
-                      <UserX size={20} />
-                  </button>
-                  <button onClick={() => { setSelectedPerson(c); setShowPayModal(true); }} className="bg-emerald-600 text-white px-5 py-3 rounded-xl font-black text-xs shadow-lg active:scale-95">PAY</button>
-              </div>
+          {/* စစ်ထုတ်ထားသော စာရင်းကို သုံးပါမည် */}
+          {contractors
+            .filter(c => showArchived ? c.status === 'archived' : c.status !== 'archived')
+            .map(c => (
+            <div key={c.id} className={`bg-white dark:bg-slate-800 p-6 rounded-[2.5rem] shadow-xl border-2 flex justify-between items-center group transition-all ${showArchived ? 'border-amber-100 opacity-80' : 'hover:border-emerald-500 border-slate-50 dark:border-slate-700'}`}>
+                
+                {/* Profile Link Area */}
+                <Link href={`/payroll/view/${c.id}`} className="flex items-center gap-4 flex-1">
+                    <div className="w-16 h-16 bg-slate-50 dark:bg-slate-900 rounded-2xl flex items-center justify-center overflow-hidden border-2 border-slate-100 dark:border-slate-700 shadow-inner">
+                        {c.photoUrl ? <img src={c.photoUrl} className="w-full h-full object-cover" /> : <Users size={30} className="text-slate-300"/>}
+                    </div>
+                    <div>
+                        <p className="font-black text-xl text-slate-900 dark:text-white">{c.name}</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{c.phone || 'No Phone'}</p>
+                    </div>
+                </Link>
+
+                {/* Buttons Section (Archived mode ပေါ်မူတည်ပြီး ပြောင်းလဲမည်) */}
+                <div className="flex items-center gap-2">
+                    {showArchived ? (
+                        // --- Restore Button (Archived ကြည့်နေချိန်မှာပဲ ပေါ်မယ်) ---
+                        <button 
+                          onClick={() => handleRestore(c.id)}
+                          className="flex items-center gap-2 bg-emerald-600 text-white px-6 py-2 rounded-xl font-black text-[10px] shadow-lg hover:bg-slate-900 transition-all active:scale-95"
+                        >
+                          <RotateCcw size={14}/> RESTORE
+                        </button>
+                    ) : (
+                        // --- ပုံမှန် Edit, Archive, Pay ခလုတ်များ ---
+                        <>
+                          <button onClick={() => {
+                            const d = c.joinDate?.toDate?.() || c.date?.toDate?.() || new Date();
+                            setEditItem({ 
+                                ...c, id: c.id, tempJoinDate: d.toISOString().split('T')[0],
+                                phone: c.phone || "", taxId: c.taxId || "", address: c.address || "", 
+                                internalNotes: c.internalNotes || "" 
+                            });
+                          }} className="p-3 text-slate-300 hover:text-emerald-500 transition-colors"><Edit3 size={20}/></button>
+
+                          <button onClick={() => handleArchive(c.id)} className="p-3 text-slate-300 dark:text-slate-600 hover:text-rose-500 transition-colors" title="Archive"><UserX size={20} /></button>
+                          
+                          <button onClick={() => { setSelectedPerson(c); setShowPayModal(true); }} className="bg-emerald-600 text-white px-5 py-3 rounded-xl font-black text-xs shadow-lg active:scale-95">PAY</button>
+                        </>
+                    )}
+                </div>
             </div>
           ))}
+          {/* စာရင်းမရှိလျှင် ပြမည့် Empty State */}
+          {contractors.filter(c => showArchived ? c.status === 'archived' : c.status !== 'archived').length === 0 && (
+              <p className="p-20 text-center font-bold text-slate-300 uppercase italic">No records found.</p>
+          )}
         </div>
       </div>
 

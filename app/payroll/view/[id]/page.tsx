@@ -67,7 +67,11 @@ export default function PersonnelProfile() {
   return (
     <Layout>
       <div className="pt-4 pb-40 px-4 max-w-6xl mx-auto">
-        <button onClick={() => window.history.back()} className="flex items-center gap-2 text-slate-400 font-bold mb-8 hover:text-slate-900 transition uppercase text-[10px] tracking-widest"><ArrowLeft size={16}/> Back to Payroll</button>
+        <button 
+            onClick={() => window.history.back()} 
+            className="flex items-center gap-2 text-slate-400 font-bold mb-8 hover:text-emerald-500 dark:hover:text-white transition-all uppercase text-[10px] tracking-widest active:scale-95"
+          ><ArrowLeft size={16}/> Back to Payroll
+        </button>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left: Profile Card */}

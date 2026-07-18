@@ -35,6 +35,7 @@ export default function Contractors() {
   const [payAmount, setPayAmount] = useState('');
   const pathname = usePathname();
   const [showArchived, setShowArchived] = useState(false);
+  const [payDate, setPayDate] = useState(new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
@@ -92,27 +93,33 @@ export default function Contractors() {
   };
 
   const handlePay = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedPerson || !payAmount || isSaving) return;
-    setIsSaving(true);
-    try {
-      await addDoc(collection(db, "transactions"), {
-        description: `W-2 Salary: ${selectedPerson.name}`,
-        amount: parseFloat(payAmount),
-        category: 'w2_wages',
-        date: serverTimestamp(),
-        uid: auth.currentUser?.uid,
-        verified: false
-      });
-      alert("Success! Salary recorded in Ledger.");
-      setShowPayModal(false);
-      setPayAmount('');
-    } catch (err) {
-      alert("Error recording payment");
-    } finally {
-      setIsSaving(false);
-    }
-};
+      e.preventDefault();
+      if (!selectedPerson || !payAmount || isSaving) return;
+      setIsSaving(true);
+      try {
+        await addDoc(collection(db, "transactions"), {
+          description: `W-2 Salary: ${selectedPerson.name}`,
+          amount: parseFloat(payAmount),
+          category: 'w2_wages',
+          
+          // --- အခုမှ အသစ်ထည့်လိုက်သော အပိုင်း ---
+          transactionDate: new Date(payDate), // ရွေးချယ်လိုက်သော နေ့စွဲဖြင့် သိမ်းမည်
+          // ---------------------------------
+
+          date: serverTimestamp(),
+          uid: auth.currentUser?.uid,
+          verified: false
+        });
+        alert("Success! Salary recorded in Ledger.");
+        setShowPayModal(false);
+        setPayAmount('');
+        setPayDate(new Date().toISOString().split('T')[0]); // Reset to today
+      } catch (err) {
+        alert("Error recording payment");
+      } finally {
+        setIsSaving(false);
+      }
+  };
 
   const resetForm = () => {
     setName(''); setEmail(''); setPhone(''); setAddress(''); setTaxId(''); setSalary('');
@@ -156,6 +163,7 @@ export default function Contractors() {
           <button onClick={() => setShowAddModal(true)} className="bg-slate-900 text-white p-4 rounded-2xl shadow-xl active:scale-95 transition-all"><UserPlus size={24}/></button>
         </div>
 
+        {/* Pay Modal: Full Features --- */}
         <div className="grid grid-cols-1 gap-4">
           {/* စစ်ထုတ်ထားသော စာရင်းကို သုံးပါမည် */}
           {contractors
@@ -278,16 +286,33 @@ export default function Contractors() {
         </div>
       )}
 
+      {/* --- Pay Modal Update: --- */}
       {showPayModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
           <div className="bg-white dark:bg-slate-800 w-full max-w-md rounded-[3rem] shadow-2xl p-10 relative animate-in zoom-in duration-200">
             <button onClick={() => setShowPayModal(false)} className="absolute top-8 right-8 text-slate-400 hover:text-slate-900 bg-slate-50 dark:bg-slate-700 p-2 rounded-full"><X size={20}/></button>
             <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2 uppercase italic">Issue Payment</h3>
-            <p className="text-slate-500 font-medium mb-10 italic">Paying to: <span className="text-emerald-500 font-black">{selectedPerson?.name}</span></p>
+            <p className="text-slate-500 font-medium mb-8 italic text-sm">Paying to: <span className="text-emerald-500 font-black">{selectedPerson?.name}</span></p>
             
             <form onSubmit={handlePay} className="space-y-6">
+              {/* --- ၁။ ရက်စွဲရွေးချယ်သည့်အကွက် (အသစ်ထည့်လိုက်သည်) --- */}
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-2 flex items-center gap-2">
+                  <Calendar size={14} className="text-emerald-500" /> Payment Date (ပေးချေသည့်ရက်)
+                </label>
+                <input 
+                  type="date" 
+                  value={payDate}
+                  onChange={(e) => setPayDate(e.target.value)}
+                  className="w-full p-4 bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-bold text-slate-900 dark:text-white outline-none focus:border-emerald-500 transition-all"
+                  required
+                />
+              </div>
+
+              {/* --- ၂။ ပမာဏရိုက်သည့်အကွက် --- */}
               <div className="relative">
-                <span className="absolute left-5 top-1/2 -translate-y-1/2 text-2xl font-black text-slate-300">$</span>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-2">Amount (ပမာဏ $)</label>
+                <span className="absolute left-5 top-[60%] -translate-y-1/2 text-2xl font-black text-slate-300">$</span>
                 <input 
                   type="number" step="0.01" autoFocus 
                   value={payAmount} onChange={e => setPayAmount(e.target.value)} 
@@ -296,8 +321,9 @@ export default function Contractors() {
                   required 
                 />
               </div>
-              <button type="submit" className="w-full bg-emerald-600 text-white p-6 rounded-full font-black uppercase tracking-widest shadow-xl hover:bg-slate-900 transition-all flex items-center justify-center gap-3 active:scale-95 text-xs">
-                <DollarSign size={24}/> CONFIRM & RECORD
+
+              <button type="submit" disabled={isSaving} className="w-full bg-emerald-600 text-white p-6 rounded-full font-black uppercase tracking-widest shadow-xl hover:bg-slate-900 transition-all flex items-center justify-center gap-3 active:scale-95 text-xs">
+                {isSaving ? <Loader2 className="animate-spin" /> : <><DollarSign size={24}/> CONFIRM & RECORD</>}
               </button>
             </form>
           </div>

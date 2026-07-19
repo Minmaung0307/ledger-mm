@@ -72,8 +72,10 @@ export default function PersonnelProfile() {
         });
         alert("Document Saved!");
         window.location.reload();
-    } catch (err) { alert("Upload failed"); }
-    finally { setIsUploading(false); }
+    } catch (err: any) {
+        console.error("Full Error:", err); // Browser Console မှာ အမှားအစစ်ကို ကြည့်ဖို့
+        alert("Upload failed: " + err.message); // User ကို အသေးစိတ်ပြဖို့
+    } finally { setIsUploading(false); }
   };
 
   const getTenure = () => {
@@ -125,7 +127,7 @@ export default function PersonnelProfile() {
                     <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Personal Files</h4>
                     <label className="cursor-pointer text-emerald-500 hover:text-emerald-700 transition">
                         <UploadCloud size={20}/>
-                        <input type="file" className="hidden" onChange={handleDocUpload} />
+                        <input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,image/*" className="hidden" onChange={handleDocUpload} disabled={isUploading} />
                     </label>
                 </div>
                 <div className="space-y-3">

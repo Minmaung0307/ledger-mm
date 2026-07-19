@@ -111,16 +111,6 @@ export default function TaxFormWorksheet() {
             </div>
           </div>
 
-          <div className="mt-10 p-8 bg-blue-600 text-white rounded-[2.5rem] shadow-2xl relative overflow-hidden no-print">
-              <div className="absolute top-0 right-0 p-4 opacity-20 rotate-12"><ShieldCheck size={100}/></div>
-              <div className="relative z-10">
-                  <h4 className="text-xl font-black uppercase italic mb-2">NY Non-Resident Refund Reminder</h4>
-                  <p className="text-sm font-medium text-blue-100 leading-relaxed">
-                      လူကြီးမင်းသည် NC တွင် နေထိုင်သူဖြစ်သောကြောင့် NY အလုပ်ရှင်မှ ဖြတ်တောက်ထားသော <span className="text-white font-black underline">NYC Local Tax (City Tax)</span> များကို အခွန်ဆောင်သည့်အခါ (Form IT-203) ဖြင့် ပြန်လည်တောင်းခံ (Refund) ရယူရန် မမေ့ပါနှင့်။
-                  </p>
-              </div>
-          </div>
-
           <div className="p-6 bg-emerald-50 border-b border-slate-200 flex justify-between items-center print:bg-white">
             <span className="font-black text-slate-900 uppercase text-[10px] tracking-widest">Line 31: Net Profit / Loss</span>
             <span className="text-3xl font-black text-emerald-600 print:text-black">${netProfit.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
@@ -169,6 +159,16 @@ export default function TaxFormWorksheet() {
               ))}
             </tbody>
           </table>
+
+          <div className="mt-10 p-8 bg-blue-600 text-white rounded-[2.5rem] shadow-2xl relative overflow-hidden no-print">
+              <div className="absolute top-0 right-0 p-4 opacity-20 rotate-12"><ShieldCheck size={100}/></div>
+              <div className="relative z-10">
+                  <h4 className="text-xl font-black uppercase italic mb-2">NY Non-Resident Refund Reminder</h4>
+                  <p className="text-sm font-medium text-blue-100 leading-relaxed">
+                      လူကြီးမင်းသည် NC တွင် နေထိုင်သူဖြစ်သောကြောင့် NY အလုပ်ရှင်မှ ဖြတ်တောက်ထားသော <span className="text-white font-black underline">NYC Local Tax (City Tax)</span> များကို အခွန်ဆောင်သည့်အခါ (Form IT-203) ဖြင့် ပြန်လည်တောင်းခံ (Refund) ရယူရန် မမေ့ပါနှင့်။
+                  </p>
+              </div>
+          </div>
 
           {/* Paid Preparer Section */}
           <div className="mt-10 border-t-2 border-slate-900 p-8 bg-slate-50 print:bg-white">

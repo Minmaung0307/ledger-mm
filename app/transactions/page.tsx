@@ -29,6 +29,7 @@ export default function TransactionsList() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all');
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
@@ -150,36 +151,63 @@ export default function TransactionsList() {
   };
 
   const downloadAuditZip = async () => {
-      const zip = new JSZip();
-      const csvContent = "Date,Description,Category,Amount\n" + 
-          filtered.map(t => `${t.date?.toDate().toLocaleDateString()},${t.description},${t.category},${t.amount}`).join("\n");
-      
-      // ၁။ CSV ဖိုင်ကို Zip ထဲထည့်မယ်
-      zip.file("business_ledger.csv", csvContent);
-      
-      // ၂။ ပုံ (Receipts) တွေကို Folder လိုက် စုထည့်မယ်
-      alert("Starting to bundle your receipts... please wait.");
-      
-      const imgFolder = zip.folder("receipt_images");
-      for (const item of filtered) {
-          if (item.receiptUrl) {
-              try {
-                  const response = await fetch(item.receiptUrl);
-                  const blob = await response.blob();
-                  imgFolder?.file(`${item.description}_${item.id}.jpg`, blob);
-              } catch (err) { console.error("Skip image:", err); }
-          }
-      }
+    if (filtered.length === 0) return alert("No records to bundle.");
+    
+    const zip = new JSZip();
+    
+    // ၁။ စာရင်းဇယား CSV ဖိုင် ပြင်ဆင်ခြင်း
+    const csvHeaders = "Date,Description,Category,Amount,Account,Verified\n";
+    const csvRows = filtered.map(t => {
+      const d = t.displayDate?.toLocaleDateString() || "N/A";
+      return `${d},${t.description.replace(/,/g, '')},${t.category},${t.amount},${t.bankAccount || 'Other'},${t.verified ? 'YES' : 'NO'}`;
+    }).join("\n");
+    
+    zip.file("business_ledger_summary.csv", csvHeaders + csvRows);
 
-      // ၃။ Zip ဖိုင်ကို ထုတ်ပေးမယ်
-      const content = await zip.generateAsync({ type: "blob" });
-      // const url = window.URL.createObjectURL(content);
-      // const a = document.createElement('a');
-      // a.href = url;
-      // a.download = `Business_Audit_Package_${new Date().getFullYear()}.zip`;
-      // a.click();
-      // window.URL.revokeObjectURL(url);
-      saveAs(content, `Business_Audit_Package_${new Date().getFullYear()}.zip`);
+    // ၂။ ဘောက်ချာပုံ (Receipts) များကို Folder ထဲထည့်ခြင်း
+    alert("Starting to bundle your data. This includes Receipts and Bank Statements. Please wait...");
+    
+    const imgFolder = zip.folder("receipt_images");
+    for (const item of filtered) {
+      if (item.receiptUrl) {
+        try {
+          const res = await fetch(item.receiptUrl);
+          const blob = await res.blob();
+          // ဖိုင်အမည်မှာ မပါရမည့် Symbol များကို ဖယ်ထုတ်ပြီး သိမ်းမယ်
+          const safeName = item.description.replace(/[/\\?%*:|"<>]/g, '-');
+          imgFolder?.file(`${safeName}_${item.id.slice(0, 5)}.jpg`, blob);
+        } catch (err) { console.error("Skip image:", err); }
+      }
+    }
+
+    // ၃။ ဘဏ်စာရင်း (Bank Statements - PDF) များကို Folder ထဲထည့်ခြင်း
+    try {
+      const stmtFolder = zip.folder("bank_statements_archive");
+      // Firestore ကနေ ဒီ User ရဲ့ Statement အားလုံးကို လှမ်းယူမယ်
+      const qStmt = query(collection(db, "bank_statements"), where("uid", "==", auth.currentUser?.uid));
+      const stmtSnap = await getDocs(qStmt);
+
+      for (const docItem of stmtSnap.docs) {
+        const s = docItem.data();
+        if (s.fileUrl) {
+          try {
+            const res = await fetch(s.fileUrl);
+            const blob = await res.blob();
+            // အကောင့်နာမည်နဲ့ လအလိုက် ဖိုင်အမည်ပေးမယ်
+            const fileName = `${s.accountName}_${s.period || 'Statement'}.pdf`.replace(/[/\\?%*:|"<>]/g, '-');
+            stmtFolder?.file(fileName, blob);
+          } catch (e) { console.error("Skip Statement PDF:", e); }
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching statements:", err);
+    }
+
+    // ၄။ Zip ဖိုင်အဖြစ် ထုတ်ပေးခြင်း
+    const content = await zip.generateAsync({ type: "blob" });
+    saveAs(content, `Full_Audit_Package_${selectedYear || new Date().getFullYear()}.zip`);
+    
+    alert("Audit Package created successfully!");
   };
 
   const isPotentialDuplicate = (item: any) => {

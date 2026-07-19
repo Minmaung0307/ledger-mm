@@ -6,7 +6,7 @@ import { db, auth } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, query, where, onSnapshot, orderBy, doc, getDoc } from 'firebase/firestore'; // doc, getDoc ထည့်လိုက်ပါပြီ
 // import { TAX_CATEGORIES } from '@/lib/constants';
-import { Printer, FileCheck, Info } from 'lucide-react';
+import { Printer, FileCheck, Info, ShieldCheck } from 'lucide-react';
 
 export default function TaxFormWorksheet() {
   const [taxYearType, setTaxYearType] = useState('calendar'); // 'calendar' (Jan-Dec) သို့မဟုတ် 'fiscal' (Jun-May)
@@ -109,6 +109,16 @@ export default function TaxFormWorksheet() {
             <div className="bg-emerald-500 text-white px-3 py-1 rounded font-black text-[9px] print:border print:border-black print:text-black print:bg-white">
                 OFFICIAL DATA READY
             </div>
+          </div>
+
+          <div className="mt-10 p-8 bg-blue-600 text-white rounded-[2.5rem] shadow-2xl relative overflow-hidden no-print">
+              <div className="absolute top-0 right-0 p-4 opacity-20 rotate-12"><ShieldCheck size={100}/></div>
+              <div className="relative z-10">
+                  <h4 className="text-xl font-black uppercase italic mb-2">NY Non-Resident Refund Reminder</h4>
+                  <p className="text-sm font-medium text-blue-100 leading-relaxed">
+                      လူကြီးမင်းသည် NC တွင် နေထိုင်သူဖြစ်သောကြောင့် NY အလုပ်ရှင်မှ ဖြတ်တောက်ထားသော <span className="text-white font-black underline">NYC Local Tax (City Tax)</span> များကို အခွန်ဆောင်သည့်အခါ (Form IT-203) ဖြင့် ပြန်လည်တောင်းခံ (Refund) ရယူရန် မမေ့ပါနှင့်။
+                  </p>
+              </div>
           </div>
 
           <div className="p-6 bg-emerald-50 border-b border-slate-200 flex justify-between items-center print:bg-white">

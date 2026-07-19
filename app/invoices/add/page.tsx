@@ -10,6 +10,7 @@ export default function AddInvoice() {
   const [amount, setAmount] = useState('');
   const [invoiceNumber, setInvoiceNumber] = useState(`INV-${Date.now().toString().slice(-4)}`);
   const [isSaving, setIsSaving] = useState(false);
+  const [issueDate, setIssueDate] = useState(new Date().toISOString().split('T')[0]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,7 +24,8 @@ export default function AddInvoice() {
         invoiceNumber,
         status: 'Unpaid',
         createdAt: serverTimestamp(),
-        uid: auth.currentUser.uid
+        uid: auth.currentUser.uid,
+        issueDate: new Date(issueDate),
       });
       window.location.href = "/invoices";
     } catch (err) {
@@ -41,6 +43,10 @@ export default function AddInvoice() {
             <label className="block text-xs font-black text-slate-400 uppercase mb-2 tracking-widest">Client Name</label>
             <input type="text" value={clientName} onChange={(e) => setClientName(e.target.value)} required
               className="w-full p-4 border-2 border-slate-100 rounded-2xl focus:border-emerald-500 outline-none font-bold" />
+          </div>
+          <div>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-2">Invoice Date</label>
+            <input type="date" value={issueDate} onChange={e => setIssueDate(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-bold text-slate-900 dark:text-white outline-none" required />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>

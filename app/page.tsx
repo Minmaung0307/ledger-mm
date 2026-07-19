@@ -13,7 +13,7 @@ import { TAX_CATEGORIES } from '@/lib/constants';
 export default function Dashboard() {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [dismissedMessages, setDismissedMessages] = useState<string[]>([]);
-  const [stats, setStats] = useState({ income: 0, expenses: 0, estimatedPaid: 0, w2Withheld: 0 });
+  const [stats, setStats] = useState({ income: 0, businessIncome: 0, w2Income: 0, expenses: 0, estimatedPaid: 0, w2Withheld: 0 });
   const [chartData, setChartData] = useState<any[]>([]);
   const [pieData, setPieData] = useState<any[]>([]); // New state for Pie Chart
   const [loading, setLoading] = useState(true);
@@ -44,14 +44,18 @@ export default function Dashboard() {
   const deadline = getNextDeadline();
 
   // --- အခွန်တွက်ချက်မှု Logic များ (ဒီနေရာမှာ ထားပါ) ---
-  // ၁။ အသားတင်အမြတ် (Business Profit)
-  const netProfit = stats.income - stats.expenses;
-  // ၂။ ဆောင်ရမည့် စုစုပေါင်းအခွန် ခန့်မှန်းခြေ (15.3% SE Tax)
-  const taxLiability = netProfit > 0 ? netProfit * 0.153 : 0;
-  // ၃။ NY (W2) မှာ ပေးခဲ့တာရော၊ NC (1099) အတွက် ကြိုပေးတာရော စုစုပေါင်း
-  const totalAlreadyPaid = stats.estimatedPaid + stats.w2Withheld; // NY Tax + NC Pre-paid
-  // ၄။ အစိုးရကို အမှန်တကယ် ထပ်ပေးဖို့ ကျန်တော့မည့် ပမာဏ
-  const remainingTax = taxLiability - totalAlreadyPaid;
+  // ၁။ လုပ်ငန်းအမြတ် (1099 Profit - W2 လစာကို မပါစေရပါ)
+    const businessProfit = stats.businessIncome - stats.expenses;
+
+    // ၂။ ဆောင်ရမည့် စုစုပေါင်းအခွန် ခန့်မှန်းခြေ (15.3% SE Tax)
+    // လုပ်ငန်းအမြတ်ပေါ်မှာပဲ တွက်ပါမယ် (W2 လစာကို အခွန်ထပ်မတွက်တော့ပါ)
+    const taxLiability = businessProfit > 0 ? businessProfit * 0.153 : 0;
+
+    // ၃။ ပေးပြီးသား စုစုပေါင်း (NY W2 မှာ ပေးခဲ့တာ + NC 1099 အတွက် ကြိုပေးထားတာ)
+    const totalAlreadyPaid = stats.estimatedPaid + stats.w2Withheld;
+
+    // ၄။ အစိုးရကို အမှန်တကယ် ထပ်ပေးဖို့ ကျန်တော့မည့် ပမာဏ
+    const remainingTax = taxLiability - totalAlreadyPaid;
 
   useEffect(() => {
     const key = `dismissed_alerts_${new Date().getMonth()}_${new Date().getFullYear()}`;
@@ -100,60 +104,77 @@ export default function Dashboard() {
 
           setTransactions(data);
 
-          let totalInc = 0; let totalExp = 0; let totalEstPaid = 0;
-          let curMonthInc = 0; let curMonthExp = 0;
+          let totalInc = 0; 
+          let busInc = 0;       // 1099 လုပ်ငန်းဝင်ငွေအတွက်
+          let w2Inc = 0;        // W2 လစာဝင်ငွေအတွက်
+          let totalExp = 0; 
+          let totalEstPaid = 0;
           let totalW2Withheld = 0;
+
+          let curMonthInc = 0; 
+          let curMonthExp = 0;
           const monthlyDataMap: any = {};
           const expenseGroupMap: any = {};
           const now = new Date();
-
           const currentMonth = now.getMonth();
           const currentYear = now.getFullYear();
 
           const dupeCheck: any = {};
           const foundDuplicates: any[] = [];
-          
           const pastMerchants: string[] = [];
           const currentMonthMerchants: string[] = [];
 
           data.forEach((item: any) => {
-            const date = item.displayDate;
-            const monthLabel = date.toLocaleString('default', { month: 'short' });
+              const date = item.displayDate;
+              const monthLabel = date.toLocaleString('default', { month: 'short' });
 
-            // --- [Smart Fix]: Recurring နာမည်များကို သန့်စင်ခြင်း ---
-            // (Apr), (May) စတာတွေကို ဖြုတ်ပြီး မူရင်းနာမည်ကိုပဲ ယူမယ်
-            const cleanName = item.description.split(' (')[0].trim();
+              // ၁။ [Smart Fix]: Recurring နာမည်များကို သန့်စင်ခြင်း
+              const cleanName = item.description.split(' (')[0].trim();
 
-            if (item.category === 'income' || item.category === 'w2_income') {
-              totalInc += item.amount;
-            } else if (item.category === 'estimated_tax_paid') {
-              totalEstPaid += item.amount;
-            } else if (item.category === 'w2_withheld') {
-              totalW2Withheld += item.amount;
-            } else {
-              totalExp += item.amount;
-              const catLabel = TAX_CATEGORIES.find(c => c.value === item.category)?.label || 'Other';
-              expenseGroupMap[catLabel] = (expenseGroupMap[catLabel] || 0) + item.amount;
-            }
+              // ၂။ [Tax Logic]: ဝင်ငွေနှင့် အသုံးစရိတ်များကို အမျိုးအစားခွဲခြားခြင်း
+              if (item.category === 'income') {
+                  totalInc += item.amount;
+                  busInc += item.amount; // 1099
+              } else if (item.category === 'w2_income') {
+                  totalInc += item.amount;
+                  w2Inc += item.amount; // W2
+              } else if (item.category === 'estimated_tax_paid') {
+                  totalEstPaid += item.amount;
+              } else if (item.category === 'w2_withheld') {
+                  totalW2Withheld += item.amount;
+              } else {
+                  totalExp += item.amount;
+                  // Pie Chart အတွက် အသုံးစရိတ်များကို အုပ်စုဖွဲ့ခြင်း
+                  const catLabel = TAX_CATEGORIES.find(c => c.value === item.category)?.label || 'Other';
+                  expenseGroupMap[catLabel] = (expenseGroupMap[catLabel] || 0) + item.amount;
+              }
 
-            if (!monthlyDataMap[monthLabel]) monthlyDataMap[monthLabel] = { month: monthLabel, income: 0, expense: 0 };
-            if (item.category === 'income' || item.category === 'w2_income') monthlyDataMap[monthLabel].income += item.amount;
-            else if (item.category !== 'estimated_tax_paid' && item.category !== 'w2_withheld') monthlyDataMap[monthLabel].expense += item.amount;
-
-            if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
-              if (item.category === 'income' || item.category === 'w2_income') curMonthInc += item.amount;
-              else if (item.category !== 'estimated_tax_paid' && item.category !== 'w2_withheld') curMonthExp += item.amount;
+              // ၃။ [Charts Logic]: ဝင်ငွေ၊ ထွက်ငွေ ဂရပ်အတွက် တွက်ခြင်း
+              if (!monthlyDataMap[monthLabel]) monthlyDataMap[monthLabel] = { month: monthLabel, income: 0, expense: 0 };
               
-              currentMonthMerchants.push(cleanName); // Cleaned name ကို ထည့်မယ်
-            } else {
-              pastMerchants.push(cleanName); // Cleaned name ကို ထည့်မယ်
-            }
+              if (item.category === 'income' || item.category === 'w2_income') {
+                  monthlyDataMap[monthLabel].income += item.amount;
+              } else if (item.category !== 'estimated_tax_paid' && item.category !== 'w2_withheld') {
+                  // အခွန်ပေးတာတွေကို အသုံးစရိတ်ဂရပ်ထဲမှာ မထည့်ပါ (ဒါမှ Operating စရိတ်အစစ်ကို သိမှာပါ)
+                  monthlyDataMap[monthLabel].expense += item.amount;
+              }
 
-            const dupeKey = `${item.description}-${item.amount}-${date.toLocaleDateString()}`;
-            dupeCheck[dupeKey] = (dupeCheck[dupeKey] || 0) + 1;
-            if (dupeCheck[dupeKey] >= 2) {
-              foundDuplicates.push({ name: item.description, amount: item.amount, count: dupeCheck[dupeKey] });
-            }
+              // ၄။ [Monthly Stats & Assistant]: ယခုလအတွက် တွက်ချက်ခြင်း
+              if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
+                  if (item.category === 'income' || item.category === 'w2_income') curMonthInc += item.amount;
+                  else if (item.category !== 'estimated_tax_paid' && item.category !== 'w2_withheld') curMonthExp += item.amount;
+                  
+                  currentMonthMerchants.push(cleanName);
+              } else {
+                  pastMerchants.push(cleanName);
+              }
+
+              // ၅။ [Duplicate Check]: စာရင်းထပ်ခြင်း ရှိမရှိ စစ်ဆေးခြင်း
+              const dupeKey = `${item.description}-${item.amount}-${date.toLocaleDateString()}`;
+              dupeCheck[dupeKey] = (dupeCheck[dupeKey] || 0) + 1;
+              if (dupeCheck[dupeKey] >= 2) {
+                  foundDuplicates.push({ name: item.description, amount: item.amount, count: dupeCheck[dupeKey] });
+              }
           });
 
           const alerts: any[] = [];
@@ -177,7 +198,14 @@ export default function Dashboard() {
           const visibleAlerts = alerts.filter(a => !dismissedMessages.includes(a.msg));
           setSmartAlerts(visibleAlerts.slice(0, 3)); 
 
-          setStats({ income: totalInc, expenses: totalExp, estimatedPaid: totalEstPaid, w2Withheld: totalW2Withheld });
+          setStats({ 
+            income: totalInc, 
+            businessIncome: busInc, 
+            w2Income: w2Inc,
+            expenses: totalExp, 
+            estimatedPaid: totalEstPaid, 
+            w2Withheld: totalW2Withheld 
+          });
           setMonthlyStats({ inc: curMonthInc, exp: curMonthExp });
           setChartData(Object.values(monthlyDataMap).reverse().slice(-6)); 
           setPieData(Object.keys(expenseGroupMap).map(name => ({ name, value: expenseGroupMap[name] })));
@@ -329,7 +357,7 @@ export default function Dashboard() {
         <div className="bg-slate-900 p-6 rounded-3xl shadow-xl border border-white/5 relative overflow-hidden group">
         <div className="relative z-10">
           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Net Taxable Profit</p>
-          <p className="text-3xl font-black text-white mt-1">${netProfit.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+          <p className="text-3xl font-black text-white mt-1">${businessProfit.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
           <p className="text-[10px] font-bold text-emerald-400 mt-2 italic">Margin Safe</p>
           <div className="mt-4 pt-4 border-t border-slate-800 flex justify-between">
              <p className="text-[11px] font-bold text-slate-500 italic">Net Margin: <span className="text-emerald-400 font-black">${(monthlyStats.inc - monthlyStats.exp).toLocaleString()}</span></p>
@@ -346,7 +374,7 @@ export default function Dashboard() {
               <h4 className="text-xl font-black text-white mb-6">Transfer to Tax Account</h4>
               <div className="bg-white/20 backdrop-blur-md p-6 rounded-2xl border border-white/20 text-center">
                   <p className="text-[10px] font-bold text-emerald-100 uppercase mb-1">Move this amount now:</p>
-                  <p className="text-4xl font-black text-white">${(netProfit * 0.25).toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+                  <p className="text-4xl font-black text-white">${(businessProfit * 0.25).toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
                   <p className="text-[10px] font-medium text-white mt-3 leading-tight italic opacity-90">
                       *သင့်အမြတ်၏ ၂၅% ကို သီးသန့်စုထားခြင်းဖြင့် အခွန်ဆောင်ရမည့်အချိန်တွင် အခက်အခဲမရှိစေရန် အကြံပြုပါသည်။
                   </p>

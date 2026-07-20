@@ -128,6 +128,23 @@ export default function Dashboard() {
           let curMonthExp = 0;
           const monthlyDataMap: any = {};
           const expenseGroupMap: any = {};
+          data.forEach((item: any) => {
+            // ဝင်ငွေနဲ့ အခွန်ပေးတာတွေကို ဖယ်ပြီး ကျန်တာကို Pie Chart တွက်မယ်
+            if (item.category !== 'income' && item.category !== 'w2_income' && item.category !== 'estimated_tax_paid') {
+              
+              // ၁။ Category ကို ရှာမယ်
+              const cat = TAX_CATEGORIES.find(c => c.value === item.category);
+              
+              // ၂။ နာမည်ဟောင်းဖြစ်နေရင် "Other/Legacy" လို့ မပြဘဲ သူ့နာမည်အတိုင်းပဲပြမယ်၊ အရောင်ကိုတော့ list ထဲကယူမယ်
+              const label = cat ? cat.label : (item.category.replace('_', ' ').toUpperCase());
+              const color = cat ? cat.color : null; // အရောင်ရှိရင် ယူမယ်၊ မရှိရင် အောက်မှာ COLORS ကနေ ပေးမယ်
+
+              if (!expenseGroupMap[label]) {
+                expenseGroupMap[label] = { value: 0, color: color };
+              }
+              expenseGroupMap[label].value += item.amount;
+            }
+          });
           const now = new Date();
           const currentMonth = now.getMonth();
           const currentYear = now.getFullYear();
@@ -221,7 +238,9 @@ export default function Dashboard() {
           });
           setMonthlyStats({ inc: curMonthInc, exp: curMonthExp });
           setChartData(Object.values(monthlyDataMap).reverse().slice(-6)); 
-          setPieData(Object.keys(expenseGroupMap).map(name => ({ name, value: expenseGroupMap[name] })));
+          setPieData(Object.keys(expenseGroupMap).map(name => ({ name, 
+            value: expenseGroupMap[name].value,
+            color: expenseGroupMap[name].color })));
           setLoading(false);
         }, (error) => {
           console.error("Firestore error:", error);
@@ -496,26 +515,14 @@ export default function Dashboard() {
                       animationBegin={0}
                       animationDuration={1200}
                     >
-                      {pieData.map((entry, index) => {
-                        // ၁။ Category list ထဲမှာ နာမည်အသစ် (label) သို့မဟုတ် နာမည်ဟောင်း (value) နဲ့ တိုက်စစ်မယ်
-                        const categoryConfig = TAX_CATEGORIES.find(
-                          (c) => c.label === entry.name || c.value === entry.name
-                        );
-
-                        // ၂။ အရောင်ကို အဆင့်ဆင့် ရွေးချယ်မယ်
-                        // - ပထမဦးစားပေး: Category မှာ သတ်မှတ်ထားတဲ့အရောင်
-                        // - ဒုတိယဦးစားပေး: COLORS array ထဲက အစဉ်လိုက်အရောင်
-                        // - နောက်ဆုံးအရန်: မီးခိုးရောင်ရင့်ရင့် (Slate-500)
-                        const cellColor = categoryConfig?.color || COLORS[index % COLORS.length] || "#64748b";
-
-                        return (
-                          <Cell 
-                            key={`cell-${index}`} 
-                            fill={cellColor} 
-                            stroke="none" // ပိုပြီး Sleek ဖြစ်သွားအောင် ဘောင်မျဉ်းဖျောက်ထားပါတယ်
-                          />
-                        );
-                      })}
+                      {pieData.map((entry, index) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          // ဒီနေရာမှာ logic ကို အခုလို ပြောင်းလိုက်ပါ
+                          fill={entry.color || COLORS[index % COLORS.length]} 
+                          stroke="none"
+                        />  
+                        ))}
                     </Pie>
                     <Tooltip 
                       contentStyle={{borderRadius: '20px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontWeight: 'bold'}} 

@@ -440,9 +440,13 @@ export default function Dashboard() {
       {/* --- Charts Section (Now with Pie Chart) --- */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-14">
         {/* Bar Chart */}
-        <div className="bg-white p-8 rounded-[3.5rem] shadow-2xl border-2 border-slate-50 overflow-hidden">
-          <h3 className="font-black text-slate-900 uppercase text-xs tracking-widest mb-10 text-center italic tracking-[0.3em]">Cash Flow</h3>
-          <div className="h-[350px] w-full min-h-[350px]">
+        <div className="bg-white dark:bg-slate-800 p-8 rounded-[3.5rem] shadow-2xl border-2 border-slate-50 dark:border-slate-700 overflow-hidden">
+          <h3 className="font-black text-slate-900 dark:text-white uppercase text-xs mb-10 text-center italic">
+            Monthly Cash Flow Analysis
+          </h3>
+
+          {/* ဒီနေရာမှာ height ကို 350px လို့ သေချာပေးပါ၊ ပြီးရင် isMounted နဲ့ အုပ်ပါ */}
+          <div className="h-[350px] w-full min-h-[350px]"> 
             {isMounted && chartData.length > 0 && (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>

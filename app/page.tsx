@@ -496,9 +496,26 @@ export default function Dashboard() {
                       animationBegin={0}
                       animationDuration={1200}
                     >
-                      {pieData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={TAX_CATEGORIES.find(c => c.label === entry.name)?.color || COLORS[index % COLORS.length]} />
-                      ))}
+                      {pieData.map((entry, index) => {
+                        // ၁။ Category list ထဲမှာ နာမည်အသစ် (label) သို့မဟုတ် နာမည်ဟောင်း (value) နဲ့ တိုက်စစ်မယ်
+                        const categoryConfig = TAX_CATEGORIES.find(
+                          (c) => c.label === entry.name || c.value === entry.name
+                        );
+
+                        // ၂။ အရောင်ကို အဆင့်ဆင့် ရွေးချယ်မယ်
+                        // - ပထမဦးစားပေး: Category မှာ သတ်မှတ်ထားတဲ့အရောင်
+                        // - ဒုတိယဦးစားပေး: COLORS array ထဲက အစဉ်လိုက်အရောင်
+                        // - နောက်ဆုံးအရန်: မီးခိုးရောင်ရင့်ရင့် (Slate-500)
+                        const cellColor = categoryConfig?.color || COLORS[index % COLORS.length] || "#64748b";
+
+                        return (
+                          <Cell 
+                            key={`cell-${index}`} 
+                            fill={cellColor} 
+                            stroke="none" // ပိုပြီး Sleek ဖြစ်သွားအောင် ဘောင်မျဉ်းဖျောက်ထားပါတယ်
+                          />
+                        );
+                      })}
                     </Pie>
                     <Tooltip 
                       contentStyle={{borderRadius: '20px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontWeight: 'bold'}} 

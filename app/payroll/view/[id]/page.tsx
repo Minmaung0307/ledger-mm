@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react';
 import Layout from '@/components/Layout';
 import { db, auth, storage } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, collection, query, where, onSnapshot, orderBy, updateDoc, arrayUnion } from 'firebase/firestore'; 
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { doc, getDoc, collection, query, where, onSnapshot, orderBy, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore'; 
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { useParams } from 'next/navigation';
 import { User, Mail, Phone, MapPin, ShieldCheck, DollarSign, Calendar, ArrowLeft, FileText, UploadCloud, Download, Clock, ChevronDown, Award, Trash2, Loader2 } from 'lucide-react';
 
@@ -74,36 +74,59 @@ export default function PersonnelProfile() {
 
   // --- Document Upload Logic (CORS နဲ့ Collection Error ကင်းစင်သော Version) ---
   const handleDocUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !person || !colType) return;
-    
-    setIsUploading(true);
-    try {
-        // ၁။ Storage ထဲ တင်မယ်
-        const storageRef = ref(storage, `documents/${person.id}/${Date.now()}_${file.name}`);
-        await uploadBytes(storageRef, file);
-        const url = await getDownloadURL(storageRef);
+      const file = e.target.files?.[0];
+      if (!file || !person || !colType) return;
+      
+      setIsUploading(true);
+      try {
+          const filePath = `documents/${person.id}/${Date.now()}_${file.name}`; // Path ကို variable ထားမယ်
+          const storageRef = ref(storage, filePath);
+          await uploadBytes(storageRef, file);
+          const url = await getDownloadURL(storageRef);
 
-        // ၂။ မှန်ကန်သော Collection ဆီသို့ အချက်အလက်ပို့မယ်
-        const docRef = doc(db, colType, person.id);
-        
-        await updateDoc(docRef, {
-            documents: arrayUnion({
-                name: file.name,
-                url: url,
-                date: new Date().toLocaleDateString(),
-                type: file.type
-            })
-        });
+          const docRef = doc(db, colType, person.id);
+          
+          await updateDoc(docRef, {
+              documents: arrayUnion({
+                  name: file.name,
+                  url: url,
+                  path: filePath, // <--- ဖျက်တဲ့အခါ သုံးဖို့ ဒါလေး အသစ်ထည့်လိုက်ပါပြီ
+                  date: new Date().toLocaleDateString(),
+                  type: file.type
+              })
+          });
 
-        alert("Success: Document saved to " + colType);
-        window.location.reload(); 
-    } catch (err: any) {
-        console.error("Full Error:", err);
-        alert("Upload failed: " + err.message);
-    } finally {
-        setIsUploading(false);
-    }
+          alert("Document Saved!");
+          window.location.reload(); 
+      } catch (err: any) {
+          alert("Upload failed: " + err.message);
+      } finally {
+          setIsUploading(false);
+      }
+  };
+
+  const handleDocDelete = async (docItem: any) => {
+      if (!confirm(`Are you sure you want to delete "${docItem.name}"?`)) return;
+
+      try {
+          const docRef = doc(db, colType, person.id);
+          
+          // ၁။ Firestore Array ထဲကနေ ဖယ်ထုတ်မယ်
+          await updateDoc(docRef, {
+              documents: arrayRemove(docItem)
+          });
+
+          // ၂။ Storage ထဲက ဖိုင်အစစ်ကိုပါ ဖျက်မယ်
+          if (docItem.path) {
+              const fileRef = ref(storage, docItem.path);
+              await deleteObject(fileRef);
+          }
+
+          alert("Document deleted!");
+          window.location.reload();
+      } catch (err: any) {
+          alert("Delete failed: " + err.message);
+      }
   };
 
   const getTenure = () => {
@@ -175,7 +198,17 @@ export default function PersonnelProfile() {
                                     <p className="text-[8px] font-bold text-slate-400 uppercase">{d.date}</p>
                                 </div>
                             </div>
-                            <a href={d.url} target="_blank" rel="noreferrer" className="p-2 text-slate-300 hover:text-emerald-600 transition-colors"><Download size={16}/></a>
+                            <div className="flex gap-1">
+                                <a href={d.url} target="_blank" rel="noreferrer" className="p-2 text-slate-400 hover:text-emerald-500 transition-colors">
+                                    <Download size={16}/>
+                                </a>
+                                <button 
+                                    onClick={() => handleDocDelete(d)}
+                                    className="p-2 text-slate-300 hover:text-rose-500 transition-colors"
+                                >
+                                    <Trash2 size={16}/>
+                                </button>
+                            </div>
                         </div>
                     ))}
                     {(!person.documents || person.documents.length === 0) && <p className="text-center text-[10px] font-bold text-slate-300 py-4 uppercase italic">No Files Attached</p>}

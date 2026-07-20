@@ -7,7 +7,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, collection, query, where, onSnapshot, orderBy, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore'; 
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { useParams } from 'next/navigation';
-import { User, Mail, Phone, MapPin, ShieldCheck, DollarSign, Calendar, ArrowLeft, FileText, UploadCloud, Download, Clock, ChevronDown, Award, Trash2, Loader2 } from 'lucide-react';
+import { User, Mail, Phone, MapPin, ShieldCheck, DollarSign, Calendar, ArrowLeft, FileText, UploadCloud, Download, Clock, ChevronDown, Award, Trash2, Loader2, Eye, X } from 'lucide-react';
 
 export default function PersonnelProfile() {
   const { id } = useParams();
@@ -17,6 +17,7 @@ export default function PersonnelProfile() {
   const [loading, setLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [isUploading, setIsUploading] = useState(false);
+  const [viewingDoc, setViewingDoc] = useState<any>(null); // Preview ကြည့်မည့်ဖိုင်
   const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
   useEffect(() => {
@@ -199,13 +200,20 @@ export default function PersonnelProfile() {
                                 </div>
                             </div>
                             <div className="flex gap-1">
-                                <a href={d.url} target="_blank" rel="noreferrer" className="p-2 text-slate-400 hover:text-emerald-500 transition-colors">
+                                {/* --- ၁။ အမြန်ကြည့်ရန် ခလုတ် --- */}
+                                <button 
+                                    onClick={() => setViewingDoc(d)}
+                                    className="p-2 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-all"
+                                    title="Quick View"
+                                >
+                                    <Eye size={18}/>
+                                </button>
+
+                                {/* အရင်ရှိပြီးသား Download နဲ့ Trash ခလုတ်များ... */}
+                                <a href={d.url} target="_blank" rel="noreferrer" className="p-2 text-slate-400 hover:text-blue-500 transition-colors">
                                     <Download size={16}/>
                                 </a>
-                                <button 
-                                    onClick={() => handleDocDelete(d)}
-                                    className="p-2 text-slate-300 hover:text-rose-500 transition-colors"
-                                >
+                                <button onClick={() => handleDocDelete(d)} className="p-2 text-slate-300 hover:text-rose-500 transition-colors">
                                     <Trash2 size={16}/>
                                 </button>
                             </div>
@@ -246,6 +254,46 @@ export default function PersonnelProfile() {
           </div>
         </div>
       </div>
+
+      {/* --- File Preview Modal --- */}
+      {viewingDoc && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 md:p-10 bg-slate-900/80 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="bg-white dark:bg-slate-800 w-full max-w-5xl h-full rounded-[2.5rem] shadow-2xl relative flex flex-col overflow-hidden">
+            
+            {/* Modal Header */}
+            <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/30">
+              <div className="flex items-center gap-3">
+                  <div className="p-2 bg-emerald-500 text-white rounded-xl shadow-lg shadow-emerald-500/20"><FileText size={20}/></div>
+                  <div>
+                      <p className="font-black text-slate-900 dark:text-white uppercase tracking-tight truncate max-w-[200px] md:max-w-md">{viewingDoc.name}</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Added on {viewingDoc.date}</p>
+                  </div>
+              </div>
+              <button onClick={() => setViewingDoc(null)} className="p-3 bg-rose-50 dark:bg-rose-900/20 text-rose-500 rounded-2xl hover:bg-rose-500 hover:text-white transition-all active:scale-95 shadow-sm"><X size={24}/></button>
+            </div>
+
+            {/* Modal Content (The Viewer) */}
+            <div className="flex-1 bg-slate-100 dark:bg-slate-900 overflow-auto flex items-center justify-center">
+              {viewingDoc.type?.includes('image') ? (
+                  // ပုံဆိုလျှင် ပုံပြမည်
+                  <img src={viewingDoc.url} className="max-w-full max-h-full object-contain shadow-2xl rounded-lg" alt="preview" />
+              ) : viewingDoc.type?.includes('pdf') ? (
+                  // PDF ဆိုလျှင် PDF Viewer ဖြင့်ပြမည်
+                  <iframe src={viewingDoc.url} className="w-full h-full border-none" title="PDF Viewer"></iframe>
+              ) : (
+                  // အခြားဖိုင်များအတွက်
+                  <div className="text-center p-20">
+                      <FileText size={80} className="mx-auto text-slate-300 mb-6" />
+                      <p className="font-black text-slate-900 dark:text-white uppercase mb-4">Preview not supported for this file type</p>
+                      <a href={viewingDoc.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 bg-emerald-600 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase shadow-xl hover:bg-slate-900 transition-all">
+                          Download to View <Download size={16}/>
+                      </a>
+                  </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }

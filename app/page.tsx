@@ -5,7 +5,20 @@ import Layout from '@/components/Layout';
 import { db, auth } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, query, orderBy, onSnapshot, where, doc, getDoc } from 'firebase/firestore';
-import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, Legend } from 'recharts';
+// import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, Legend } from 'recharts';
+import dynamic from 'next/dynamic';
+// Chart components တွေကို dynamic import လုပ်မယ် (SSR ကို ပိတ်ထားတာပါ)
+const ResponsiveContainer = dynamic(() => import('recharts').then(mod => mod.ResponsiveContainer), { ssr: false });
+const BarChart = dynamic(() => import('recharts').then(mod => mod.BarChart), { ssr: false });
+const Bar = dynamic(() => import('recharts').then(mod => mod.Bar), { ssr: false });
+const XAxis = dynamic(() => import('recharts').then(mod => mod.XAxis), { ssr: false });
+const YAxis = dynamic(() => import('recharts').then(mod => mod.YAxis), { ssr: false });
+const CartesianGrid = dynamic(() => import('recharts').then(mod => mod.CartesianGrid), { ssr: false });
+const Tooltip = dynamic(() => import('recharts').then(mod => mod.Tooltip), { ssr: false });
+const PieChart = dynamic(() => import('recharts').then(mod => mod.PieChart), { ssr: false });
+const Pie = dynamic(() => import('recharts').then(mod => mod.Pie), { ssr: false });
+const Cell = dynamic(() => import('recharts').then(mod => mod.Cell), { ssr: false });
+
 import { Plus, ChevronDown, CheckCircle2, AlertCircle, Calendar, Sparkles, AlertTriangle, Landmark, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { TAX_CATEGORIES } from '@/lib/constants';
@@ -446,7 +459,7 @@ export default function Dashboard() {
           </h3>
 
           {/* ဒီနေရာမှာ height ကို 350px လို့ သေချာပေးပါ၊ ပြီးရင် isMounted နဲ့ အုပ်ပါ */}
-          <div className="h-[350px] w-full min-h-[350px]"> 
+          <div className="h-[350px] w-full min-h-[350px] relative"> 
             {isMounted && chartData.length > 0 && (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>

@@ -5,7 +5,20 @@ import Layout from '@/components/Layout';
 import { db, auth } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, query, orderBy, onSnapshot, where, doc, getDoc } from 'firebase/firestore';
-import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, Legend } from 'recharts';
+// import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, Legend } from 'recharts';
+import dynamic from 'next/dynamic';
+// Chart components တွေကို dynamic import လုပ်မယ် (SSR ကို ပိတ်ထားတာပါ)
+const ResponsiveContainer = dynamic(() => import('recharts').then(mod => mod.ResponsiveContainer), { ssr: false });
+const BarChart = dynamic(() => import('recharts').then(mod => mod.BarChart), { ssr: false });
+const Bar = dynamic(() => import('recharts').then(mod => mod.Bar), { ssr: false });
+const XAxis = dynamic(() => import('recharts').then(mod => mod.XAxis), { ssr: false });
+const YAxis = dynamic(() => import('recharts').then(mod => mod.YAxis), { ssr: false });
+const CartesianGrid = dynamic(() => import('recharts').then(mod => mod.CartesianGrid), { ssr: false });
+const Tooltip = dynamic(() => import('recharts').then(mod => mod.Tooltip), { ssr: false });
+const PieChart = dynamic(() => import('recharts').then(mod => mod.PieChart), { ssr: false });
+const Pie = dynamic(() => import('recharts').then(mod => mod.Pie), { ssr: false });
+const Cell = dynamic(() => import('recharts').then(mod => mod.Cell), { ssr: false });
+
 import { Plus, ChevronDown, CheckCircle2, AlertCircle, Calendar, Sparkles, AlertTriangle, Landmark, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { TAX_CATEGORIES } from '@/lib/constants';
@@ -115,6 +128,23 @@ export default function Dashboard() {
           let curMonthExp = 0;
           const monthlyDataMap: any = {};
           const expenseGroupMap: any = {};
+          data.forEach((item: any) => {
+            // ဝင်ငွေနဲ့ အခွန်ပေးတာတွေကို ဖယ်ပြီး ကျန်တာကို Pie Chart တွက်မယ်
+            if (item.category !== 'income' && item.category !== 'w2_income' && item.category !== 'estimated_tax_paid') {
+              
+              // ၁။ Category ကို ရှာမယ်
+              const cat = TAX_CATEGORIES.find(c => c.value === item.category);
+              
+              // ၂။ နာမည်ဟောင်းဖြစ်နေရင် "Other/Legacy" လို့ မပြဘဲ သူ့နာမည်အတိုင်းပဲပြမယ်၊ အရောင်ကိုတော့ list ထဲကယူမယ်
+              const label = cat ? cat.label : (item.category.replace('_', ' ').toUpperCase());
+              const color = cat ? cat.color : null; // အရောင်ရှိရင် ယူမယ်၊ မရှိရင် အောက်မှာ COLORS ကနေ ပေးမယ်
+
+              if (!expenseGroupMap[label]) {
+                expenseGroupMap[label] = { value: 0, color: color };
+              }
+              expenseGroupMap[label].value += item.amount;
+            }
+          });
           const now = new Date();
           const currentMonth = now.getMonth();
           const currentYear = now.getFullYear();
@@ -208,7 +238,9 @@ export default function Dashboard() {
           });
           setMonthlyStats({ inc: curMonthInc, exp: curMonthExp });
           setChartData(Object.values(monthlyDataMap).reverse().slice(-6)); 
-          setPieData(Object.keys(expenseGroupMap).map(name => ({ name, value: expenseGroupMap[name] })));
+          setPieData(Object.keys(expenseGroupMap).map(name => ({ name, 
+            value: expenseGroupMap[name].value,
+            color: expenseGroupMap[name].color })));
           setLoading(false);
         }, (error) => {
           console.error("Firestore error:", error);
@@ -440,9 +472,13 @@ export default function Dashboard() {
       {/* --- Charts Section (Now with Pie Chart) --- */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-14">
         {/* Bar Chart */}
-        <div className="bg-white p-8 rounded-[3.5rem] shadow-2xl border-2 border-slate-50 overflow-hidden">
-          <h3 className="font-black text-slate-900 uppercase text-xs tracking-widest mb-10 text-center italic tracking-[0.3em]">Cash Flow</h3>
-          <div className="h-[350px] w-full min-h-[350px]">
+        <div className="bg-white dark:bg-slate-800 p-8 rounded-[3.5rem] shadow-2xl border-2 border-slate-50 dark:border-slate-700 overflow-hidden">
+          <h3 className="font-black text-slate-900 dark:text-white uppercase text-xs mb-10 text-center italic">
+            Monthly Cash Flow Analysis
+          </h3>
+
+          {/* ဒီနေရာမှာ height ကို 350px လို့ သေချာပေးပါ၊ ပြီးရင် isMounted နဲ့ အုပ်ပါ */}
+          <div className="h-[350px] w-full min-h-[350px] relative"> 
             {isMounted && chartData.length > 0 && (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
@@ -480,8 +516,13 @@ export default function Dashboard() {
                       animationDuration={1200}
                     >
                       {pieData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={TAX_CATEGORIES.find(c => c.label === entry.name)?.color || COLORS[index % COLORS.length]} />
-                      ))}
+                        <Cell 
+                          key={`cell-${index}`} 
+                          // ဒီနေရာမှာ logic ကို အခုလို ပြောင်းလိုက်ပါ
+                          fill={entry.color || COLORS[index % COLORS.length]} 
+                          stroke="none"
+                        />  
+                        ))}
                     </Pie>
                     <Tooltip 
                       contentStyle={{borderRadius: '20px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontWeight: 'bold'}} 

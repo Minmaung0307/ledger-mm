@@ -37,14 +37,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning={true}>
-      <head>
-        {/* PWA အတွက် လိုအပ်သော ထပ်ဆောင်း meta များ */}
-        <meta name="theme-color" content="#10b981" />
-        <link rel="apple-touch-icon" href="https://www.google.com/favicon.ico" />
-      </head>
       <body 
-        // ၃။ Font Variable များကို ဤနေရာတွင် အသေအချာ သုံးပေးရပါမည်
-        // ဒါဆိုရင် အပေါ်က font တွေ အရောင်ပြန်တောက်လာပါလိမ့်မယ်
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning={true}
       >
